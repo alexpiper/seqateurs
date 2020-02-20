@@ -277,38 +277,40 @@ bbdemux <- function(install = NULL, fwd, rev = NULL, Fbarcodes = NULL, Rbarcodes
 bbtrim <- function(install = NULL, fwd, rev = NULL, primers,
                    restrictleft = NULL, out.dir = "bbduk", trim.end = "left", ordered = TRUE,
                    kmer = NULL, mink = FALSE, tpe = TRUE, hdist = 0, degenerate = TRUE,
-                   overwrite = TRUE, quality = FALSE, maxlength = NULL, tmp=NULL) {
+                   overwrite = TRUE, quality = FALSE, maxlength = NULL, tmp=NULL, quiet=FALSE) {
   nsamples <- length(fwd)
   # Create temp files
   if(is.null(tmp)) {tmp <- tempdir()}
   tmplogs <- paste0(tmp, "/bbtrim.log")
   if(file.exists(tmplogs)) { file.remove(tmplogs)}
-  
+
   bbduk <- function(install = NULL, fwd, rev = NULL, primers,
                     restrictleft = NULL, out.dir = "bbduk", trim.end = "left", ordered = TRUE,
                     kmer = NULL, mink = FALSE, tpe = TRUE, hdist = 0, degenerate = TRUE,
-                    overwrite = TRUE, quality = FALSE, maxlength = NULL, tmp=NULL) {
+                    overwrite = TRUE, quality = FALSE, maxlength = NULL, tmp=NULL, quiet=FALSE) {
     install <- paste0(install, "/current jgi.BBDuk")
-    
+
+    if(!quiet) {message(paste0("Trimming primers from: ", fwd, " and ", rev))}
+
     # Create temp files
     if(is.null(tmp)) {tmp <- tempdir()}
     tmplogs <- paste0(tmp, "/bbtrim.log")
     tmpout <- paste0(tmp,"/stdout.log")
     tmperr <- paste0(tmp,"/stderr.log")
-    
+
     in1 <- paste0("in=", fwd)
     if (!is.null(rev)) {
       in2 <- paste0("in2=", rev)
     } else {
       (in2 <- "")
     }
-    
+
     if (!is.null(primers)) {
       literal <- paste0("literal=", paste0(primers, collapse = ","))
     } else {
       (stop("Primer sequences are required for trimming"))
     }
-    
+
     if (is.null(rev)) {
       out <- paste0(
         "out=", dirname(fwd), "/", out.dir, "/", basename(fwd)
@@ -323,26 +325,26 @@ bbtrim <- function(install = NULL, fwd, rev = NULL, primers,
       out2 <- paste0("out2=", dirname(rev), "/", out.dir, "/", basename(rev)) %>%
         stringr::str_replace(pattern = ".fastq", replacement = ".trimmed.fastq")
     }
-    
-    
+
+
     if (trim.end == "left") {
       trim.end <- paste0("ktrim=l")
     } else if (trim.end == "right") {
       trim.end <- paste0("ktrim=r")
     }
-    
+
     if (is.numeric(kmer)) {
       kmer <- paste0("k=", kmer)
     } else {
       (kmer <- paste0("k=", sort(nchar(primers), decreasing = FALSE)[1]))
     }
-    
+
     if (is.numeric(maxlength)) {
       maxlength <- paste0("maxlength=", maxlength)
     } else {
       maxlength <- ""
     }
-    
+
     if (is.numeric(mink)) {
       mink <- paste0("mink=", mink) # Note - mink makes it noticibly slower
     } else if (mink == TRUE) {
@@ -350,36 +352,36 @@ bbtrim <- function(install = NULL, fwd, rev = NULL, primers,
     } else if (mink == FALSE) {
       mink <- ""
     }
-    
-    
+
+
     if (is.numeric(restrictleft)) {
       restrictleft <- paste0("restrictleft=", restrictleft)
     } else {
       restrictleft <- paste0("restrictleft=", sort(nchar(primers), decreasing = TRUE)[1])
     }
-    
+
     if (ordered == TRUE) {
       ordered <- "ordered=T"
     } else {
       (ordered <- "")
     }
-    
+
     if (is.numeric(hdist)) {
       hdist <- paste0("hdist=", hdist)
     }
-    
+
     if (degenerate == TRUE) {
       degenerate <- "copyundefined"
     } else {
       (degenerate <- "")
     }
-    
+
     if (overwrite == TRUE) {
       overwrite <- "overwrite=TRUE"
     } else {
       (overwrite <- "")
     }
-    
+
     if (tpe == TRUE) {
       tpe <- "tpe"
     } else {
@@ -400,13 +402,13 @@ bbtrim <- function(install = NULL, fwd, rev = NULL, primers,
     } else {
       (quality <- "")
     }
-    
+
     args <- paste(" -cp ", install, in1, in2, literal, restrictleft, out, out1,
                   out2, kmer, mink, hdist, trim.end, tpe, degenerate, quality,
                   maxlength, overwrite, "-da",
                   collapse = " "
     )
-    
+
     # Run bbduk
     result <- system2(command="java",
                       args = args,
@@ -419,7 +421,7 @@ bbtrim <- function(install = NULL, fwd, rev = NULL, primers,
     file.append(tmplogs, tmperr)
     file.remove(c(tmpout, tmperr))
   }
-  
+
   if (nsamples > 1) {
     for (i in 1:nsamples) {
       bbduk(install = install, fwd = fwd[i], rev = rev[i],
@@ -427,7 +429,7 @@ bbtrim <- function(install = NULL, fwd, rev = NULL, primers,
             out.dir = out.dir, trim.end = trim.end, ordered = ordered,
             kmer = kmer, mink = mink, tpe = tpe, hdist = hdist,
             degenerate = degenerate, quality = quality,
-            overwrite = overwrite, maxlength = maxlength, tmp=tmp)
+            overwrite = overwrite, maxlength = maxlength, tmp=tmp, quiet=quiet)
     }
   } else if (nsamples == 1) {
     bbduk(install = install, fwd = fwd, rev = rev,
@@ -435,12 +437,12 @@ bbtrim <- function(install = NULL, fwd, rev = NULL, primers,
           out.dir = out.dir, trim.end = trim.end, ordered = ordered,
           kmer = kmer, mink = mink, tpe = tpe, hdist = hdist,
           degenerate = degenerate, quality = quality,
-          overwrite = overwrite, maxlength = maxlength, tmp=tmp)
+          overwrite = overwrite, maxlength = maxlength, tmp=tmp, quiet=quiet)
   }
-  
+
   #Parse logs
   parsed <- parse_bbtrim(tmplogs)
-  
+
   if (quality == TRUE) {
     #Base composition histogram by position.
     bhist <- parse_bhist(tmp)
@@ -452,7 +454,7 @@ bbtrim <- function(install = NULL, fwd, rev = NULL, primers,
     gchist <- parse_aqhist(tmp)
     #Read length histogram.
     lhist <- parse_lhist(tmp)
-    
+
     out <- list(parsed,
                 bhist,
                 qhist,
@@ -461,7 +463,7 @@ bbtrim <- function(install = NULL, fwd, rev = NULL, primers,
                 lhist)
     names(out) <- c("reads", "bp_freq", "quality","avg_quality","gc","length")
   } else (out <- parsed)
-  
+
   return(out)
 }
 
@@ -633,10 +635,10 @@ parse_bhist <- function(dir) {
       N = col_double()
     )) %>%
     dplyr::rename(Pos = `#Pos`) %>%
-    mutate(Source = Source %>% 
-             str_replace(pattern = "^(.*)\\/", replacement="")%>% 
+    mutate(Source = Source %>%
+             str_replace(pattern = "^(.*)\\/", replacement="")%>%
             str_replace(pattern = "_bhist.txt", replacement=""))
-  
+
   return(out)
 }
 
@@ -662,10 +664,10 @@ parse_qhist <- function(dir) {
       Read2_log = col_double()
     )) %>%
     dplyr::rename(Pos = `#BaseNum`) %>%
-    mutate(Source = Source %>% 
-             str_replace(pattern = "^(.*)\\/", replacement="")%>% 
+    mutate(Source = Source %>%
+             str_replace(pattern = "^(.*)\\/", replacement="")%>%
              str_replace(pattern = "_qhist.txt", replacement=""))
-  
+
   return(out)
 }
 
@@ -691,10 +693,10 @@ parse_aqhist <- function(dir) {
       fraction2 = col_double()
     ))%>%
     dplyr::rename(avg_quality = `#Quality`) %>%
-    mutate(Source = Source %>% 
-             str_replace(pattern = "^(.*)\\/", replacement="")%>% 
+    mutate(Source = Source %>%
+             str_replace(pattern = "^(.*)\\/", replacement="")%>%
              str_replace(pattern = "_aqhist.txt", replacement=""))
-  
+
   return(out)
 }
 
@@ -718,12 +720,12 @@ parse_gchist <- function(dir) {
       X2 = col_double()
     ))  %>%
     dplyr::mutate(X1 = stringr::str_replace(`X1`, pattern="#", replacement=""),
-                  Source = Source %>% 
-                    str_replace(pattern = "^(.*)\\/", replacement="")%>% 
+                  Source = Source %>%
+                    str_replace(pattern = "^(.*)\\/", replacement="")%>%
                     str_replace(pattern = "_gchist.txt", replacement="")) %>%
     dplyr::group_by(Source) %>%
-    tidyr::pivot_wider(names_from = X1, values_from = X2) 
-  
+    tidyr::pivot_wider(names_from = X1, values_from = X2)
+
   return(out)
 }
 
@@ -746,8 +748,8 @@ parse_lhist <- function(dir) {
       Count = col_double()
     )) %>%
     dplyr::rename(Length = `#Length`) %>%
-    mutate(Source = Source %>% 
-             str_replace(pattern = "^(.*)\\/", replacement="")%>% 
+    mutate(Source = Source %>%
+             str_replace(pattern = "^(.*)\\/", replacement="")%>%
              str_replace(pattern = "_lhist.txt", replacement=""))
   return(out)
 }

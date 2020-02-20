@@ -21,7 +21,8 @@ bbtrim(
   overwrite = TRUE,
   quality = FALSE,
   maxlength = NULL,
-  tmp = NULL
+  tmp = NULL,
+  quiet = FALSE
 )
 }
 \arguments{
