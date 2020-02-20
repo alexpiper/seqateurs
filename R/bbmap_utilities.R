@@ -436,23 +436,23 @@ bbtrim <- function(install = NULL, fwd, rev = NULL, primers, checkpairs=FALSE,
     )
 
     # Run bbduk
-    result <- processx::run(command="java",
-                            args = args,
-                            stdout = tmpout,
-                            stderr = tmperr,
-                            echo=quiet,
-                            echo_cmd	= quiet,
-                            spinner=TRUE,
-                            windows_verbatim_args=TRUE,
-                            error_on_status = FALSE,
-                            cleanup_tree = TRUE)
+    #result <- processx::run(command="java",
+    #                        args = args,
+    #                        stdout = tmpout,
+    #                        stderr = tmperr,
+    #                        echo=quiet,
+    #                        echo_cmd	= quiet,
+    #                        spinner=TRUE,
+    #                        windows_verbatim_args=TRUE,
+    #                       error_on_status = FALSE,
+    #                        cleanup_tree = TRUE)
 
-   #
-   #result <- system2(command="java",
-   #                  args = args,
-   #                  stdout = tmpout,
-   #                  stderr = tmperr,
-   #                  wait=TRUE)
+   
+   result <- system2(command="java",
+                     args = args,
+                     stdout = tmpout,
+                     stderr = tmperr,
+                     wait=TRUE)
     now <- date()
     cat(paste0("Executed: ", now, "\n"), file = tmplogs, append=TRUE)
     cat(paste0("Sample:\t", fwd, "\n"), file = tmplogs, append=TRUE)
