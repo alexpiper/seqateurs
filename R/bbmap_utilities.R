@@ -226,6 +226,7 @@ bbdemux <- function(install = NULL, fwd, rev = NULL, Fbarcodes = NULL, Rbarcodes
 #' @param primers (Required) Forward and reverse primers to trim
 #' @param restrictleft (Optional) Defaults to the size of the largest primer.
 #' Restricts the kmer search for primer sequences to just the left side of the molecule.
+#' @param checkpairs (Optional) Whether paired end checking should be conducted
 #' @param out.dir (Optional) Default "trimmed"
 #'  The path to write the output reads.
 #' @param trim.end (Optional) Default is "left"
@@ -447,7 +448,7 @@ bbtrim <- function(install = NULL, fwd, rev = NULL, primers, checkpairs=FALSE,
     #                       error_on_status = FALSE,
     #                        cleanup_tree = TRUE)
 
-   
+
    result <- system2(command="java",
                      args = args,
                      stdout = tmpout,

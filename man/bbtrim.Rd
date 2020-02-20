@@ -9,12 +9,14 @@ bbtrim(
   fwd,
   rev = NULL,
   primers,
+  checkpairs = FALSE,
   restrictleft = NULL,
   out.dir = "bbduk",
   trim.end = "left",
   ordered = TRUE,
   kmer = NULL,
   mink = FALSE,
+  tbo = TRUE,
   tpe = TRUE,
   hdist = 0,
   degenerate = TRUE,
@@ -33,6 +35,8 @@ bbtrim(
 \item{rev}{(Optional) Vector of locations of reverse reads}
 
 \item{primers}{(Required) Forward and reverse primers to trim}
+
+\item{checkpairs}{(Optional) Whether paired end checking should be conducted}
 
 \item{restrictleft}{(Optional) Defaults to the size of the largest primer.
 Restricts the kmer search for primer sequences to just the left side of the molecule.}
