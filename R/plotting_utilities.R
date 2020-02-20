@@ -223,3 +223,130 @@ plot_lengths <- function(dir, aggregate = FALSE, sample = 1e6){
   }
   return(p)
 }
+
+
+
+# estimate_truclen ------------------------------------------------------------
+
+#' Automatically estimate trunclen for filtering
+#'
+#' @param fwd
+#' @param rev
+#' @param threshold
+#' @param maxlength
+#' @param minlength
+#' @param qa_sample
+#' @param overlap_sample
+#' @param quiet
+#'
+#' @return
+#' @export
+#'
+#' @examples
+estimate_truclen <- function(fwd, rev=NULL, threshold=25, maxlength, minlength, qa_sample = 5e+05, overlap_sample=100, quiet=FALSE) {
+  fqa <- get_qual_stats(fwd, n=qa_sample)
+  if(!is.null(rev)){
+    rqa <- get_qual_stats(rev, n=qa_sample)
+  }
+  if(missing(maxlength)){
+    maxlength <- max(max(fqa$Cycle), max(rqa$Cycle))
+
+    message(paste0("Maxlength is emply, setting to ", maxlength, " bp"))
+  }
+  if(missing(minlength) & !is.null(rev)){
+    overlap <- c(mapply(n_overlap,fwd, rev, sample = overlap_sample))
+    ux <- unique(overlap)
+    tab <- tabulate(match(overlap, ux))
+    minlength <- ux[tab == max(tab)]
+    message(paste0("Minlength is empty, estimated minimum overlap of ", minlength, " bp"))
+  } else if (missing(minlength) & is.null(rev)){
+    minlength <- 0
+    warning(paste0("Minlength is empty and has been set to ", minlength, " bp"))
+
+  }
+
+  fwd_trunc <- fqa %>%
+    filter(QMean < threshold) %>%
+    pull(Cycle) %>%
+    min()
+  rev_trunc <- rqa %>%
+    filter(QMean < threshold) %>%
+    pull(Cycle) %>%
+    min()
+
+  # Check if merge length is longer than amplicon
+  if (fwd_trunc > maxlength) {
+    fwd_trunc <- maxlength
+  }
+  if (rev_trunc > maxlength){
+    rev_trunc <- maxlength
+  }
+  # Check if merge length is possible
+  if (fwd_trunc < minlength) {
+    fwd_trunc <- minlength
+  }
+  if (rev_trunc < minlength){
+    rev_trunc <- minlength
+  }
+  out <- c(fwd_trunc, rev_trunc)
+  return(out)
+}
+
+
+#' Minimum overlap between a query and reference
+#'
+#' @param query
+#' @param ref
+#'
+#' @return
+#' @export
+#'
+#' @examples
+align_overlap <- function(query, ref) {
+  al <- dada2::nwalign(query, ref)
+  fwd_gaps <- length(gregexpr("-", al[[1]])[[1]])
+  rev_gaps <- length(gregexpr("-", al[[2]])[[1]])
+
+  overlap <- nchar(al[[1]]) - (fwd_gaps + rev_gaps)
+  return(overlap)
+}
+
+
+#' Number of bases overlapping between forward and reverse reads
+#'
+#' @param fwd
+#' @param rev
+#' @param sample
+#'
+#' @return
+#' @export
+#'
+#' @examples
+n_overlap <- function(fwd, rev, sample = 100) {
+
+  #Sample reads
+  fF <- FastqStreamer(fwd, n=sample)
+  on.exit(close(fF))
+  set.seed(123L);fqF <- yield(fF)
+
+  fR <- FastqStreamer(rev, n=sample)
+  on.exit(close(fR), add=TRUE)
+  set.seed(123L);fqR <- yield(fR)
+
+  #Nfilter
+  keep <- nFilter()(fqF) & nFilter()(fqR)
+  fqF <- fqF[keep]
+  fqR <- fqR[keep]
+
+  #Check ids match
+  idF <- trimTails(ShortRead::id(fqF), 1, " ")
+  idR <- trimTails(ShortRead::id(fqR), 1, " ")
+
+  if(!all(idF == idR)){stop("Error: paired end reads dont match")}
+
+  #Get overlap
+  overlap <- mapply(align_overlap, as.character(sread(fqF)),  rc(as.character(sread(fqR))))
+  overlap <- as.numeric(overlap)
+  return(overlap)
+}
+
