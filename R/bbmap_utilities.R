@@ -541,39 +541,45 @@ bbsplit <- function(install = NULL, files, overwrite = FALSE) {
 #' @export
 #' @import dplyr
 #' @import tidyr
-#'
+#' @import stringr
 #' @examples
 parse_bbtrim <- function(x) {
-
+  
   lines <- readLines(x)
-
-  sample <- readr::read_tsv(lines[which(str_sub(lines, 1, 7) == 'Sample:' )], col_names = FALSE) %>%
+  
+  if (any(stringr::str_detect(lines, "Sample:"))){
+  sample <- readr::read_tsv(lines[which(stringr::str_sub(lines, 1, 7) == 'Sample:' )], col_names = FALSE) %>%
     tidyr::separate(X2, into="sample", sep="\\.", extra="drop") %>%
     dplyr::select(sample)
-
-  input <- read_tsv(lines[which(str_sub(lines, 1, 6) == 'Input:' )], col_names = FALSE) %>%
+  } else (stop("Error: Sample not found in log file, try deleting temporary files"))
+  
+  if (any(stringr::str_detect(lines, "Input:"))){
+  input <- read_tsv(lines[which(stringr::str_sub(lines, 1, 6) == 'Input:' )], col_names = FALSE) %>%
     tidyr::separate(X2, into="input_reads", sep=" ", extra="drop") %>%
     tidyr::separate(X4, into="input_bases", sep=" ", extra="drop") %>%
     dplyr::select(input_reads, input_bases) %>%
     dplyr::mutate_if(is.character, as.numeric)
-
-  ktrimmed <- read_tsv(lines[which(str_sub(lines, 1, 9) == 'KTrimmed:' )], col_names = FALSE) %>%
+  } else (stop("Error: Input not found in log file, try deleting temporary files"))
+  
+  if (any(stringr::str_detect(lines, "KTrimmed:"))){
+  ktrimmed <- read_tsv(lines[which(stringr::str_sub(lines, 1, 9) == 'KTrimmed:' )], col_names = FALSE) %>%
     tidyr::separate(X2, into="ktrimmed_reads", sep=" ", extra="drop") %>%
     tidyr::separate(X3, into="ktrimmed_bases", sep=" ", extra="drop") %>%
     dplyr::select(ktrimmed_reads, ktrimmed_bases) %>%
     dplyr::mutate_if(is.character, as.numeric)
-
-  result <- read_tsv(lines[which(str_sub(lines, 1, 7) == 'Result:' )], col_names = FALSE) %>%
+  } else (stop("Error: Ktrimmed not found in log file, try deleting temporary files"))
+  
+  if (any(stringr::str_detect(lines, "Result:"))){
+  result <- read_tsv(lines[which(stringr::str_sub(lines, 1, 7) == 'Result:' )], col_names = FALSE) %>%
     tidyr::separate(X2, into="output_reads", sep=" ", extra="drop") %>%
     tidyr::separate(X3, into="output_bases", sep=" ", extra="drop") %>%
     dplyr::select(output_reads, output_bases) %>%
     dplyr::mutate_if(is.character, as.numeric)
-
+  } else (stop("Error: Result not found in log file, try deleting temporary files"))
   out <- cbind(sample, input, ktrimmed, result)
   return(out)
-
+  
 }
-
 # Parse bbdemux -----------------------------------------------------------
 
 #' Parse appended bbdemux logs into tidy format
