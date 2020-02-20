@@ -276,7 +276,7 @@ bbdemux <- function(install = NULL, fwd, rev = NULL, Fbarcodes = NULL, Rbarcodes
 #'}
 bbtrim <- function(install = NULL, fwd, rev = NULL, primers,
                    restrictleft = NULL, out.dir = "bbduk", trim.end = "left", ordered = TRUE,
-                   kmer = NULL, mink = FALSE, tpe = TRUE, hdist = 0, degenerate = TRUE,
+                   kmer = NULL, mink = FALSE, tbo= TRUE, tpe = TRUE, hdist = 0, degenerate = TRUE,
                    overwrite = TRUE, quality = FALSE, maxlength = NULL, tmp=NULL, quiet=FALSE) {
   nsamples <- length(fwd)
   # Create temp files
@@ -284,11 +284,11 @@ bbtrim <- function(install = NULL, fwd, rev = NULL, primers,
   tmplogs <- paste0(tmp, "/bbtrim.log")
   if(file.exists(tmplogs)) { file.remove(tmplogs)}
 
-  bbduk <- function(install = NULL, fwd, rev = NULL, primers,
+  bbduk <- function(install = NULL, fwd, rev = NULL, primers,checkpairs = FALSE,
                     restrictleft = NULL, out.dir = "bbduk", trim.end = "left", ordered = TRUE,
-                    kmer = NULL, mink = FALSE, tpe = TRUE, hdist = 0, degenerate = TRUE,
+                    kmer = NULL, mink = FALSE, tbo= TRUE, tpe = TRUE, hdist = 0, degenerate = TRUE,
                     overwrite = TRUE, quality = FALSE, maxlength = NULL, tmp=NULL, quiet=FALSE) {
-    install <- paste0(install, "/current jgi.BBDuk")
+    #install <- paste0(install, "/current jgi.BBDuk")
 
     if(!quiet) {message(paste0("Trimming primers from: ", fwd, " and ", rev))}
 
@@ -387,6 +387,33 @@ bbtrim <- function(install = NULL, fwd, rev = NULL, primers,
     } else {
       (tpe <- "")
     }
+
+    if (tbo == TRUE) {
+      tbo <- "tbo"
+    } else {
+      (tbo <- "")
+    }
+
+    # Check pairing
+    if(checkpairs == TRUE){
+      reformat_args <- paste(" -cp ", paste0(install, "/current jgi.ReformatReads "), in1, in2, "vpair", collapse = " ")
+      # Run Reformatreads
+
+      result <- processx::run(command="java",
+                              args = reformat_args,
+                              echo=quiet,
+                              echo_cmd	= quiet,
+                              spinner=TRUE,
+                              windows_verbatim_args=TRUE,
+                              error_on_status = FALSE,
+                              cleanup_tree = TRUE)
+
+      if(stringr::str_detect(result$stderr, "Names do not appear to be correctly paired.")){
+        stop(message(paste0("ERROR: ", fwd, " and ", rev, " do not appear to be correctly paired")))
+      } else ( message("Reads are correctly paired"))
+
+    }
+
     # Set up quality tracking
     if (quality == TRUE) {
       qualnames <- fwd %>% str_replace(pattern=".fastq.gz", replacement="") %>%
@@ -402,19 +429,30 @@ bbtrim <- function(install = NULL, fwd, rev = NULL, primers,
     } else {
       (quality <- "")
     }
-
-    args <- paste(" -cp ", install, in1, in2, literal, restrictleft, out, out1,
-                  out2, kmer, mink, hdist, trim.end, tpe, degenerate, quality,
+    args <- paste(" -cp ", paste0(install, "/current jgi.BBDuk "), in1, in2, literal, restrictleft, out, out1,
+                  out2, kmer, mink, hdist, trim.end,tbo, tpe, degenerate, quality,
                   maxlength, overwrite, "-da",
                   collapse = " "
     )
 
     # Run bbduk
-    result <- system2(command="java",
-                      args = args,
-                      stdout = tmpout,
-                      stderr = tmperr,
-                      wait=TRUE)
+    result <- processx::run(command="java",
+                            args = args,
+                            stdout = tmpout,
+                            stderr = tmperr,
+                            echo=quiet,
+                            echo_cmd	= quiet,
+                            spinner=TRUE,
+                            windows_verbatim_args=TRUE,
+                            error_on_status = FALSE,
+                            cleanup_tree = TRUE)
+
+   #
+   #result <- system2(command="java",
+   #                  args = args,
+   #                  stdout = tmpout,
+   #                  stderr = tmperr,
+   #                  wait=TRUE)
     now <- date()
     cat(paste0("Executed: ", now, "\n"), file = tmplogs, append=TRUE)
     cat(paste0("Sample:\t", fwd, "\n"), file = tmplogs, append=TRUE)
@@ -427,7 +465,7 @@ bbtrim <- function(install = NULL, fwd, rev = NULL, primers,
       bbduk(install = install, fwd = fwd[i], rev = rev[i],
             primers = primers, restrictleft = restrictleft,
             out.dir = out.dir, trim.end = trim.end, ordered = ordered,
-            kmer = kmer, mink = mink, tpe = tpe, hdist = hdist,
+            kmer = kmer, mink = mink, tbo=tbo, tpe = tpe, hdist = hdist,
             degenerate = degenerate, quality = quality,
             overwrite = overwrite, maxlength = maxlength, tmp=tmp, quiet=quiet)
     }
@@ -435,7 +473,7 @@ bbtrim <- function(install = NULL, fwd, rev = NULL, primers,
     bbduk(install = install, fwd = fwd, rev = rev,
           primers = primers, restrictleft = restrictleft,
           out.dir = out.dir, trim.end = trim.end, ordered = ordered,
-          kmer = kmer, mink = mink, tpe = tpe, hdist = hdist,
+          kmer = kmer, mink = mink, tbo=tbo, tpe = tpe, hdist = hdist,
           degenerate = degenerate, quality = quality,
           overwrite = overwrite, maxlength = maxlength, tmp=tmp, quiet=quiet)
   }
@@ -544,15 +582,15 @@ bbsplit <- function(install = NULL, files, overwrite = FALSE) {
 #' @import stringr
 #' @examples
 parse_bbtrim <- function(x) {
-  
+
   lines <- readLines(x)
-  
+
   if (any(stringr::str_detect(lines, "Sample:"))){
   sample <- readr::read_tsv(lines[which(stringr::str_sub(lines, 1, 7) == 'Sample:' )], col_names = FALSE) %>%
     tidyr::separate(X2, into="sample", sep="\\.", extra="drop") %>%
     dplyr::select(sample)
   } else (stop("Error: Sample not found in log file, try deleting temporary files"))
-  
+
   if (any(stringr::str_detect(lines, "Input:"))){
   input <- read_tsv(lines[which(stringr::str_sub(lines, 1, 6) == 'Input:' )], col_names = FALSE) %>%
     tidyr::separate(X2, into="input_reads", sep=" ", extra="drop") %>%
@@ -560,7 +598,7 @@ parse_bbtrim <- function(x) {
     dplyr::select(input_reads, input_bases) %>%
     dplyr::mutate_if(is.character, as.numeric)
   } else (stop("Error: Input not found in log file, try deleting temporary files"))
-  
+
   if (any(stringr::str_detect(lines, "KTrimmed:"))){
   ktrimmed <- read_tsv(lines[which(stringr::str_sub(lines, 1, 9) == 'KTrimmed:' )], col_names = FALSE) %>%
     tidyr::separate(X2, into="ktrimmed_reads", sep=" ", extra="drop") %>%
@@ -568,7 +606,7 @@ parse_bbtrim <- function(x) {
     dplyr::select(ktrimmed_reads, ktrimmed_bases) %>%
     dplyr::mutate_if(is.character, as.numeric)
   } else (stop("Error: Ktrimmed not found in log file, try deleting temporary files"))
-  
+
   if (any(stringr::str_detect(lines, "Result:"))){
   result <- read_tsv(lines[which(stringr::str_sub(lines, 1, 7) == 'Result:' )], col_names = FALSE) %>%
     tidyr::separate(X2, into="output_reads", sep=" ", extra="drop") %>%
@@ -578,7 +616,7 @@ parse_bbtrim <- function(x) {
   } else (stop("Error: Result not found in log file, try deleting temporary files"))
   out <- cbind(sample, input, ktrimmed, result)
   return(out)
-  
+
 }
 # Parse bbdemux -----------------------------------------------------------
 
