@@ -8,6 +8,10 @@
 #'
 #' @return
 #' @export
+#' @import xml2
+#' @import rvest
+#' @import httr
+#'
 #'
 #' @examples
 fastqc_install <- function(url, dest.dir = "bin", force = FALSE) {

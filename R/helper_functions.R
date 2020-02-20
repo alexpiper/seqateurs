@@ -1,234 +1,4 @@
 
-
-#### ALL FUNCTIONS TO BE MOVED
-
-# Get Qual Stats ----------------------------------------------------------
-
-
-#' Get qual stats
-#'
-#' @param input
-#' @param n
-#'
-#' @return
-#' @export
-#'
-#' @examples
-get_qual_stats <- function (input, n = 5e+05) {
-
-  statdf <- data.frame(Cycle = integer(0), Mean = numeric(0),
-                       Q25 = numeric(0), Q50 = numeric(0), Q75 = numeric(0),
-                       Cum = numeric(0), file = character(0))
-  anndf <- data.frame(minScore = numeric(0), label = character(0),
-                      rclabel = character(0), rc = numeric(0), file = character(0))
-  #Check files arent empty
-  fl <- input[file.size(input) > 28]
-  if (length(input) > length(fl)) {
-    message("Warning, the following files were empty: \n")
-    message(paste0(input[!input %in% fl], " \n"))
-  }
-  # Start loop
-  FIRST <- TRUE
-  for (f in fl[!is.na(fl)]) {
-
-    # f <- fl[!is.na(fl)][[1]]
-
-    srqa <- qa(f, n = n)
-    df <- srqa[["perCycle"]]$quality
-    rc <- sum(srqa[["readCounts"]]$read)
-    if (rc >= n) {
-      rclabel <- paste("Reads >= ", n)
-    }  else {      rclabel <- paste("Reads: ", rc)
-    }
-    means <- rowsum(df$Score * df$Count, df$Cycle)/rowsum(df$Count,  df$Cycle)
-
-    get_quant <- function(xx, yy, q) {
-      xx[which(cumsum(yy)/sum(yy) >= q)][[1]]
-    }
-    q25s <- by(df, df$Cycle, function(x) get_quant(x$Score, x$Count, 0.25), simplify = TRUE)
-    q50s <- by(df, df$Cycle, function(x) get_quant(x$Score, x$Count, 0.5), simplify = TRUE)
-    q75s <- by(df, df$Cycle, function(x) get_quant(x$Score, x$Count, 0.75), simplify = TRUE)
-    cums <- by(df, df$Cycle, function(x) sum(x$Count), simplify = TRUE)
-    if (!all(sapply(list(names(q25s), names(q50s), names(q75s), names(cums)), identical, rownames(means)))) {
-      stop("Calculated quantiles/means weren't compatible.")
-    }
-    if (FIRST) {
-      plotdf <- cbind(df, file = basename(f))
-      FIRST <- FALSE
-    }
-    else {
-      plotdf <- rbind(plotdf, cbind(df, file = basename(f)))
-    }
-
-    statdf <- rbind(statdf, data.frame(Cycle = as.integer(rownames(means)),
-                                       Mean = means, Q25 = as.vector(q25s), Q50 = as.vector(q50s),
-                                       Q75 = as.vector(q75s), Cum = 10 * as.vector(cums)/rc,
-                                       file = basename(f)))
-    anndf <- rbind(anndf, data.frame(minScore = min(df$Score),
-                                     label = basename(f), rclabel = rclabel, rc = rc,
-                                     file = basename(f)))
-  }
-
-  anndf$minScore <- min(anndf$minScore)
-
-  get_ee <- function(Q){
-    ee <- 10^(-Q/ 10)
-    return(ee)
-  }
-
-
-  plotdf.summary <- aggregate(Count ~ Cycle + Score, plotdf, sum)
-  plotdf.summary$label <- paste(nrow(anndf), "files (aggregated)")
-  means <- rowsum(plotdf.summary$Score * plotdf.summary$Count, plotdf.summary$Cycle)/rowsum(plotdf.summary$Count, plotdf.summary$Cycle)
-  EEmeans <- get_ee(rowsum(plotdf.summary$Score * plotdf.summary$Count, plotdf.summary$Cycle)/rowsum(plotdf.summary$Count, plotdf.summary$Cycle))
-  q10s <- by(plotdf.summary, plotdf.summary$Cycle, function(x) get_quant(x$Score, x$Count, 0.1), simplify = TRUE)
-  EE10s <- by(plotdf.summary, plotdf.summary$Cycle, function(x) get_ee(get_quant(x$Score, x$Count, 0.1)), simplify = TRUE)
-  q25s <- by(plotdf.summary, plotdf.summary$Cycle, function(x) get_quant(x$Score, x$Count, 0.25), simplify = TRUE)
-  EE25s <- by(plotdf.summary, plotdf.summary$Cycle, function(x) get_ee(get_quant(x$Score, x$Count, 0.25)), simplify = TRUE)
-  q50s <- by(plotdf.summary, plotdf.summary$Cycle, function(x) get_quant(x$Score, x$Count, 0.5), simplify = TRUE)
-  EE50s <- by(plotdf.summary, plotdf.summary$Cycle, function(x) get_ee(get_quant(x$Score, x$Count, 0.50)), simplify = TRUE)
-  q75s <- by(plotdf.summary, plotdf.summary$Cycle, function(x) get_quant(x$Score, x$Count, 0.75), simplify = TRUE)
-  EE75s <- by(plotdf.summary, plotdf.summary$Cycle, function(x) get_ee(get_quant(x$Score, x$Count, 0.75)), simplify = TRUE)
-  q90s <- by(plotdf.summary, plotdf.summary$Cycle, function(x) get_quant(x$Score, x$Count, 0.9), simplify = TRUE)
-  EE90s <- by(plotdf.summary, plotdf.summary$Cycle, function(x) get_ee(get_quant(x$Score, x$Count, 0.9)), simplify = TRUE)
-  cums <- by(plotdf.summary, plotdf.summary$Cycle, function(x) sum(x$Count), simplify = TRUE)
-  statdf.summary <- data.frame(Cycle = as.integer(rownames(means)),
-                               QMean = means,
-                               EEmean = EEmeans,
-                               Q10 = as.vector(q10s),
-                               EE10 = as.vector(EE10s),
-                               Q25 = as.vector(q25s),
-                               EE25 = as.vector(EE25s),
-                               Q50 = as.vector(q50s),
-                               EE50 = as.vector(EE50s),
-                               Q75 = as.vector(q75s),
-                               EE75 = as.vector(EE75s),
-                               Q90 = as.vector(q90s),
-                               EE90 = as.vector(EE90s),
-                               reads = 10 * as.vector(cums)/rc)
-  attr(statdf.summary, "qsummary") <- "qsummary"
-  return(statdf.summary)
-}
-
-
-# Qual plot ---------------------------------------------------------------
-
-#' Quality plot
-#'
-#' @param input
-#' @param n
-#'
-#' @return
-#' @export
-#'
-#' @examples
-qual_plot <- function(input, n = 5e+05) {
-    summary <- get_qual_stats(input, n = n )
-    plot <- summary %>%
-      dplyr::select(Cycle, reads, starts_with("Q")) %>%
-      tidyr::pivot_longer(cols = starts_with("Q")) %>%
-      ggplot(aes(x=Cycle, y=value, colour=name)) +
-        #geom_point(size=1)  +
-        geom_line(data = summary, aes(y = QMean), color = "#66C2A5") +
-        geom_line(data = summary, aes(y = Q25), color = "#FC8D62", size = 0.25, linetype = "dashed") +
-        geom_line(data = summary, aes(y = Q50), color = "#FC8D62", size = 0.25) +
-        geom_line(data = summary, aes(y = Q75), color = "#FC8D62",  size = 0.25, linetype = "dashed") +
-        #geom_tile(aes(fill = reads))
-        labs(x = "Reads position", y = "Quality Score") +
-        ylim(c(0, NA))
-  return(plot)
-}
-
-
-#' MaxEE plot
-#'
-#' @param input
-#' @param n
-#'
-#' @return
-#' @export
-#'
-#' @examples
-maxEEplot <- function(input, n = 5e+05) {
-  summary <- get_qual_stats(input, n = n )
-  plot <- summary %>%
-    dplyr::select(Cycle, starts_with("EE")) %>%
-    tidyr::pivot_longer(cols = starts_with("EE")) %>%
-    dplyr::group_by(name) %>%
-    dplyr::mutate(cumsumEE = cumsum(value)) %>%
-    ggplot(aes(x=Cycle, y=log10(cumsumEE), colour=name)) +
-      geom_point(size=1) +
-      geom_hline(yintercept = log10(1), color = "red") +
-      geom_hline(yintercept = log10(2), color = "red") +
-      geom_hline(yintercept = log10(3), color = "red") +
-      geom_hline(yintercept = log10(5), color = "red") +
-      geom_hline(yintercept = log10(7), color = "red") +
-      geom_text(label = "MaxEE=1", aes(x = 0, y = log10(1), hjust = 0, vjust = 0), color = "red") +
-      geom_text(label = "MaxEE=2", aes(x = 0, y = log10(2), hjust = 0, vjust = 0), color = "red") +
-      geom_text(label = "MaxEE=3", aes(x = 0, y = log10(3), hjust = 0, vjust = 0), color = "red") +
-      geom_text(label = "MaxEE=5", aes(x = 0, y = log10(5), hjust = 0, vjust = 0), color = "red") +
-      geom_text(label = "MaxEE=7", aes(x = 0, y = log10(7), hjust = 0, vjust = 0), color = "red") +
-      labs(x = "Reads position", y = "Log10 Cumulative expected errors")
-  return(plot)
-}
-
-
-
-# Summarise phyloseq ------------------------------------------------------
-
-
-#' Summarise phyloseq table
-#'
-#' @param physeq
-#' @param Rank
-#' @param GroupBy
-#'
-#' @return
-#'
-#' @examples
-summarize_taxa <- function(physeq, Rank, GroupBy = NULL) {
-  Rank <- Rank[1]
-  if (!Rank %in% rank_names(physeq)) {
-    message(
-      "The argument to `Rank` was:\n", Rank,
-      "\nBut it was not found among taxonomic ranks:\n",
-      paste0(rank_names(physeq), collapse = ", "), "\n",
-      "Please check the list shown above and try again."
-    )
-  }
-  if (!is.null(GroupBy)) {
-    GroupBy <- GroupBy[1]
-    if (!GroupBy %in% sample_variables(physeq)) {
-      message(
-        "The argument to `GroupBy` was:\n", GroupBy,
-        "\nBut it was not found among sample variables:\n",
-        paste0(sample_variables(physeq), collapse = ", "), "\n",
-        "Please check the list shown above and try again."
-      )
-    }
-  }
-  # Start with fast melt
-  mdt <- fast_melt(physeq)
-  if (!is.null(GroupBy)) {
-    # Add the variable indicated in `GroupBy`, if provided.
-    sdt <- data.table(
-      SampleID = sample_names(physeq),
-      var1 = get_variable(physeq, GroupBy)
-    )
-    setnames(sdt, "var1", GroupBy)
-    # Join
-    setkey(sdt, SampleID)
-    setkey(mdt, SampleID)
-    mdt <- sdt[mdt]
-  }
-  # Summarize
-  summarydt <- mdt[, list(totalRA = sum(RelativeAbundance)),
-    by = c(Rank, GroupBy)
-  ]
-  return(summarydt)
-}
-
-
 # Create mismatch ---------------------------------------------------------
 
 
@@ -239,21 +9,21 @@ summarize_taxa <- function(physeq, Rank, GroupBy = NULL) {
 #' @param ...
 #'
 #' @return
+#' @import data.table
+#' @import stringdist
 #'
 #' @examples
 create_mismatch <- function(dna, dist, ...) {
   all_bases <- c("A", "T", "C", "G")
-  l <- tstrsplit(dna, "", fixed = TRUE)
+  l <- data.table::tstrsplit(dna, "", fixed = TRUE)
   l <- lapply(l, function(x) all_bases)
   r <- Reduce(paste0, do.call(CJ, l))
-  return(r[which(stringdist(dna, r, method = "hamming") <= dist)])
+  return(r[which(stringdist::stringdist(dna, r, method = "hamming") <= dist)])
 }
 
 
 
 # Convert to proportions --------------------------------------------------
-
-
 
 #' Convert phyloseq table to proportions
 #'
@@ -297,6 +67,9 @@ proportions <- function(x, thresh = NA, na_rm = FALSE, ...) {
 #'
 #' @return This function saves a FASTA-formatted text file from the input \code{phyloseq} object.
 #' @export
+#' @import phyloseq
+#' @import Biostrings
+#'
 #' @examples
 #' save_fasta(ps)
 #' save_fasta(ps = ps, file = "sequences.fasta", rank = "Genus")
@@ -318,7 +91,7 @@ ps_to_fasta <- function(ps = ps, out.file = NULL, rank = NULL, width = 1000, ...
     if (sum(grepl("[^ACTG]", rownames(tax_table(ps)))) > 0){
       stop("Error: Taxa do not appear to be DNA sequences.")
     }
-    seqs <- DNAStringSet(colnames(get_taxa(ps)))
+    seqs <- Biostrings::DNAStringSet(colnames(get_taxa(ps)))
   }
 
   if (is.null(rank) || !rank %in% rank_names(ps)){
@@ -328,7 +101,7 @@ ps_to_fasta <- function(ps = ps, out.file = NULL, rank = NULL, width = 1000, ...
     names(seqs) <- make.unique(unname(tax_table(ps)[,rank]), sep = "_")
   }
 
-  writeXStringSet(seqs, filepath = out.file, width=width, ... = ...)
+  Biostrings::writeXStringSet(seqs, filepath = out.file, width=width, ... = ...)
   message(paste0(ntaxa(ps), " sequences written to <", out.file, ">."))
 }
 
@@ -480,6 +253,11 @@ clr <- function(x, base=2){
 #' @return
 #' @export
 #' @import XML
+#' @import dplyr
+#' @import readr
+#' @import magrittr
+#' @import tidyr
+#' @import tibble
 #'
 #' @examples
 create_samplesheet <- function(SampleSheet, runParameters, format = "miseq"){
