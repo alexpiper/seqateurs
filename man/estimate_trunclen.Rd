@@ -17,7 +17,21 @@ estimate_trunclen(
 )
 }
 \arguments{
-\item{quiet}{}
+\item{fwd}{A path to a fastq file containing forward reads}
+
+\item{rev}{A path to a fastq file containing reverse reads}
+
+\item{threshold}{A Quality threshold used to signal the threshold to truncate the reads at}
+
+\item{maxlength}{The maximum length for the reads to be trimmed at. Suggested length of amplicon if known.}
+
+\item{minlength}{The minimum length for reads to be trimmed at to allow merging.}
+
+\item{qa_sample}{The number of reads to sample for calculating qualities.}
+
+\item{overlap_sample}{The number of reads to sample for aligning and estimating minlength}
+
+\item{quiet}{Whether progress should be printed to console}
 }
 \value{
 

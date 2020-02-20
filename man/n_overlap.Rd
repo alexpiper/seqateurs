@@ -7,7 +7,11 @@
 n_overlap(fwd, rev, sample = 100)
 }
 \arguments{
-\item{sample}{}
+\item{fwd}{A path to a fastq file containing forward reads}
+
+\item{rev}{A path to a fastq file containing reverse reads}
+
+\item{sample}{The number of reads to sample from the fastq files}
 }
 \value{
 

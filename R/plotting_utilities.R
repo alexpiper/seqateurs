@@ -230,14 +230,14 @@ plot_lengths <- function(dir, aggregate = FALSE, sample = 1e6){
 
 #' Automatically estimate trunclen for filtering
 #'
-#' @param fwd
-#' @param rev
-#' @param threshold
-#' @param maxlength
-#' @param minlength
-#' @param qa_sample
-#' @param overlap_sample
-#' @param quiet
+#' @param fwd A path to a fastq file containing forward reads
+#' @param rev A path to a fastq file containing reverse reads
+#' @param threshold A Quality threshold used to signal the threshold to truncate the reads at
+#' @param maxlength The maximum length for the reads to be trimmed at. Suggested length of amplicon if known.
+#' @param minlength The minimum length for reads to be trimmed at to allow merging.
+#' @param qa_sample The number of reads to sample for calculating qualities.
+#' @param overlap_sample The number of reads to sample for aligning and estimating minlength
+#' @param quiet Whether progress should be printed to console
 #'
 #' @return
 #' @export
@@ -310,9 +310,9 @@ align_overlap <- function(query, ref) {
 
 #' Number of bases overlapping between forward and reverse reads
 #'
-#' @param fwd
-#' @param rev
-#' @param sample
+#' @param fwd A path to a fastq file containing forward reads
+#' @param rev A path to a fastq file containing reverse reads
+#' @param sample The number of reads to sample from the fastq files
 #'
 #' @return
 #' @export
@@ -345,4 +345,35 @@ n_overlap <- function(fwd, rev, sample = 100) {
   overlap <- as.numeric(overlap)
   return(overlap)
 }
+
+
+# Summarise_index ---------------------------------------------------------
+
+
+#' Summarise index
+#'
+#' @param fq A path to a fastq file
+#' @param qualityType The quality encoding of the fastq file
+#'
+#' @return
+#' @export
+#'
+#' @examples
+summarise_index <- function(fq, qualityType = "Auto") {
+  fF <- FastqStreamer(fq)
+  on.exit(close(fF))
+
+  #Stream through fasta
+  while( length(suppressWarnings(fqF <- yield(fF, qualityType = qualityType)))) {
+    idF <- id(fqF)
+  }
+  index <- stringr::str_extract(as.character(idF),pattern="(?!:)(?:.(?!:))+$") %>%
+    table() %>%
+    as.data.frame() %>%
+    tidyr::separate(col=1, into=c("index", "index2")) %>%
+    dplyr::arrange(desc(Freq))
+  return(index)
+}
+
+
 
