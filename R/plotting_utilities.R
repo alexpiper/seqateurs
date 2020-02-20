@@ -226,7 +226,7 @@ plot_lengths <- function(dir, aggregate = FALSE, sample = 1e6){
 
 
 
-# estimate_truclen ------------------------------------------------------------
+# estimate_trunclen ------------------------------------------------------------
 
 #' Automatically estimate trunclen for filtering
 #'
@@ -243,49 +243,45 @@ plot_lengths <- function(dir, aggregate = FALSE, sample = 1e6){
 #' @export
 #'
 #' @examples
-estimate_truclen <- function(fwd, rev=NULL, threshold=25, maxlength, minlength, qa_sample = 5e+05, overlap_sample=100, quiet=FALSE) {
-  fqa <- get_qual_stats(fwd, n=qa_sample)
-  if(!is.null(rev)){
-    rqa <- get_qual_stats(rev, n=qa_sample)
+estimate_trunclen <- function (fwd, rev = NULL, threshold = 25, maxlength, minlength, minoverlap=20, qa_sample = 5e+05, overlap_sample = 100, quiet = FALSE) {
+  fqa <- get_qual_stats(fwd, n = qa_sample)
+  if (!is.null(rev)) {
+    rqa <- get_qual_stats(rev, n = qa_sample)
   }
-  if(missing(maxlength)){
+  if (missing(maxlength)) {
     maxlength <- max(max(fqa$Cycle), max(rqa$Cycle))
-
-    message(paste0("Maxlength is emply, setting to ", maxlength, " bp"))
+    message(paste0("Maxlength is emply, setting to ",
+                   maxlength, " bp"))
   }
-  if(missing(minlength) & !is.null(rev)){
-    overlap <- c(mapply(n_overlap,fwd, rev, sample = overlap_sample))
+  if (missing(minlength) & !is.null(rev)) {
+    overlap <- unlist(mapply(n_overlap, fwd, rev, sample = overlap_sample))
     ux <- unique(overlap)
     tab <- tabulate(match(overlap, ux))
-    minlength <- ux[tab == max(tab)]
-    message(paste0("Minlength is empty, estimated minimum overlap of ", minlength, " bp"))
-  } else if (missing(minlength) & is.null(rev)){
+    overlap_mode <- ux[tab == max(tab)]
+    readlength <- min(max(fqa$Cycle), max(rqa$Cycle))
+
+    # Min-trunclength
+    minlength <- readlength - (overlap_mode/2 - minoverlap)
+    message(paste0("Minlength is empty, estimated minimum trunlen of ", minlength, "bp to maintain ", minoverlap, "bp overlap between reads"))
+  }  else if (missing(minlength) & is.null(rev)) {
     minlength <- 0
-    warning(paste0("Minlength is empty and has been set to ", minlength, " bp"))
-
+    warning(paste0("Minlength is empty and has been set to ",
+                   minlength, " bp"))
   }
-
-  fwd_trunc <- fqa %>%
-    filter(QMean < threshold) %>%
-    pull(Cycle) %>%
-    min()
-  rev_trunc <- rqa %>%
-    filter(QMean < threshold) %>%
-    pull(Cycle) %>%
-    min()
-
-  # Check if merge length is longer than amplicon
+  fwd_trunc <- suppressWarnings(fqa %>% filter(QMean < threshold) %>% pull(Cycle) %>%
+                                  min())
+  rev_trunc <- suppressWarnings(rqa %>% filter(QMean < threshold) %>% pull(Cycle) %>%
+                                  min())
   if (fwd_trunc > maxlength) {
     fwd_trunc <- maxlength
   }
-  if (rev_trunc > maxlength){
+  if (rev_trunc > maxlength) {
     rev_trunc <- maxlength
   }
-  # Check if merge length is possible
   if (fwd_trunc < minlength) {
     fwd_trunc <- minlength
   }
-  if (rev_trunc < minlength){
+  if (rev_trunc < minlength) {
     rev_trunc <- minlength
   }
   out <- c(fwd_trunc, rev_trunc)
