@@ -274,7 +274,7 @@ bbdemux <- function(install = NULL, fwd, rev = NULL, Fbarcodes = NULL, Rbarcodes
 #'  degenerate=TRUE, out.dir="trimmed", ktrim="left", ordered=TRUE,
 #'   mink=FALSE, hdist=2, maxlength=140, overwrite=TRUE)
 #'}
-bbtrim <- function(install = NULL, fwd, rev = NULL, primers,
+bbtrim <- function(install = NULL, fwd, rev = NULL, primers, checkpairs=FALSE,
                    restrictleft = NULL, out.dir = "bbduk", trim.end = "left", ordered = TRUE,
                    kmer = NULL, mink = FALSE, tbo= TRUE, tpe = TRUE, hdist = 0, degenerate = TRUE,
                    overwrite = TRUE, quality = FALSE, maxlength = NULL, tmp=NULL, quiet=FALSE) {
@@ -284,7 +284,7 @@ bbtrim <- function(install = NULL, fwd, rev = NULL, primers,
   tmplogs <- paste0(tmp, "/bbtrim.log")
   if(file.exists(tmplogs)) { file.remove(tmplogs)}
 
-  bbduk <- function(install = NULL, fwd, rev = NULL, primers,checkpairs = FALSE,
+  bbduk <- function(install = NULL, fwd, rev = NULL, primers, checkpairs = FALSE,
                     restrictleft = NULL, out.dir = "bbduk", trim.end = "left", ordered = TRUE,
                     kmer = NULL, mink = FALSE, tbo= TRUE, tpe = TRUE, hdist = 0, degenerate = TRUE,
                     overwrite = TRUE, quality = FALSE, maxlength = NULL, tmp=NULL, quiet=FALSE) {
@@ -462,7 +462,7 @@ bbtrim <- function(install = NULL, fwd, rev = NULL, primers,
 
   if (nsamples > 1) {
     for (i in 1:nsamples) {
-      bbduk(install = install, fwd = fwd[i], rev = rev[i],
+      bbduk(install = install, fwd = fwd[i], rev = rev[i], checkpairs=checkpairs,
             primers = primers, restrictleft = restrictleft,
             out.dir = out.dir, trim.end = trim.end, ordered = ordered,
             kmer = kmer, mink = mink, tbo=tbo, tpe = tpe, hdist = hdist,
@@ -470,7 +470,7 @@ bbtrim <- function(install = NULL, fwd, rev = NULL, primers,
             overwrite = overwrite, maxlength = maxlength, tmp=tmp, quiet=quiet)
     }
   } else if (nsamples == 1) {
-    bbduk(install = install, fwd = fwd, rev = rev,
+    bbduk(install = install, fwd = fwd, rev = rev, checkpairs=checkpairs,
           primers = primers, restrictleft = restrictleft,
           out.dir = out.dir, trim.end = trim.end, ordered = ordered,
           kmer = kmer, mink = mink, tbo=tbo, tpe = tpe, hdist = hdist,
