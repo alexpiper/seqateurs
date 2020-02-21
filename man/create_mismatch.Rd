@@ -4,7 +4,7 @@
 \alias{create_mismatch}
 \title{Create_mismatch}
 \usage{
-create_mismatch(dna, dist, ...)
+create_mismatch(dna, dist = 1, ...)
 }
 \arguments{
 \item{...}{}

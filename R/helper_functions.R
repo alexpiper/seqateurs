@@ -11,13 +11,14 @@
 #' @return
 #' @import data.table
 #' @import stringdist
+#' @export
 #'
 #' @examples
-create_mismatch <- function(dna, dist, ...) {
+create_mismatch <- function(dna, dist=1, ...) {
   all_bases <- c("A", "T", "C", "G")
   l <- data.table::tstrsplit(dna, "", fixed = TRUE)
   l <- lapply(l, function(x) all_bases)
-  r <- Reduce(paste0, do.call(CJ, l))
+  r <- Reduce(paste0, do.call(data.table::CJ, l))
   return(r[which(stringdist::stringdist(dna, r, method = "hamming") <= dist)])
 }
 
