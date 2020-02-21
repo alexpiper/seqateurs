@@ -360,14 +360,14 @@ n_overlap <- function(fwd, rev, sample = 100) {
 #'
 #' @examples
 summarise_index <- function(fq, qualityType = "Auto") {
-  fF <- FastqStreamer(fq)
+  fF <- ShortRead::FastqStreamer(fq)
   on.exit(close(fF))
-
+  
   #Stream through fasta
   while( length(suppressWarnings(fqF <- yield(fF, qualityType = qualityType)))) {
-    idF <- id(fqF)
+    idF <- ShortRead::id(fqF)
   }
-  index <- stringr::str_extract(as.character(idF),pattern="(?!:)(?:.(?!:))+$") %>%
+  index <- stringr::str_extract(as.character(idF), pattern="(?!:)(?:.(?!:))+$") %>%
     table() %>%
     as.data.frame() %>%
     tidyr::separate(col=1, into=c("index", "index2")) %>%
