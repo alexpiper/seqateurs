@@ -4,10 +4,10 @@
 \alias{create_samplesheet}
 \title{Create Samplesheet}
 \usage{
-create_samplesheet(SampleSheet, runParameters, format = "miseq")
+create_samplesheet(SampleSheets, runParameters)
 }
 \arguments{
-\item{Rtwintag}{}
+\item{runParameters}{}
 }
 \value{
 
