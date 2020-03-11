@@ -424,3 +424,56 @@ create_samplesheet <- function(SampleSheets, runParameters){
 }
 
 
+
+# Cluster OTUS ------------------------------------------------------------
+
+
+#' OTU clustering of DADA2 seqtab
+#'
+#' Thanks to Michael mclaren and Erik Wright for code
+#' @param seqtab A DADA2 generated ASV table with columns as sequences and rows as samples
+#' @param method An agglomeration method to parse to DECIPHER::IdClusters.
+#' This should be (an abbreviation of) one of "complete", "single", "UPGMA", "WPGMA", "NJ", "ML", or "inexact".
+#' (See help page on DECIPHER::IdClusters for more information.)
+#' @param similarity A similarity to cluster at
+#' @param rename Whether clusters should be renamed to OTU<cluster #>
+#' @param cores The number of processsor cores to use
+#'
+#' @return
+#' @export
+#'
+#' @examples
+cluster_otus <- function(seqtab, method="complete", similarity=0.97, rename=FALSE, cores=1) {
+
+  asv_sequences <- colnames(seqtab)
+  sample_names <- rownames(seqtab)
+  dna <- Biostrings::DNAStringSet(asv_sequences)
+
+  cutoff <- 100 - similarity
+
+  ## Find clusters of ASVs to form the new OTUs
+  aln <- DECIPHER::AlignSeqs(dna, processors = cores)
+  d <- DECIPHER::DistanceMatrix(aln, processors = cores)
+  clusters <- DECIPHER::IdClusters(
+    d,
+    method = method,
+    cutoff = cutoff, # use `cutoff = 0.03` for a 97% OTU
+    processors = cores)
+
+  ## Use dplyr to merge the columns of the seqtab matrix for ASVs in the same OTU
+  # prep by adding sequences to the `clusters` data frame
+  clusters <- clusters %>%
+    tibble::add_column(sequence = asv_sequences)
+
+  merged_seqtab <- seqtab %>%
+    t %>%
+    rowsum(clusters$cluster) %>%
+    t
+  #Rename
+  if(rename){
+    colnames(merged_seqtab) <- paste0("OTU", colnames(merged_seqtab))
+  }
+  return(merged_seqtab)
+}
+
+
