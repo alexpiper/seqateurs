@@ -2,7 +2,7 @@
 % Please edit documentation in R/helper_functions.R
 \name{ps_to_fasta}
 \alias{ps_to_fasta}
-\title{outputs a FASTA file from a phyloseq object}
+\title{output a FASTA file from a phyloseq object}
 \usage{
 ps_to_fasta(ps = ps, out.file = NULL, rank = NULL, width = 1000, ...)
 }

@@ -11,12 +11,11 @@
 #' @import xml2
 #' @import rvest
 #' @import httr
-#'
+#' @import utils
 #'
 #' @examples
 fastqc_install <- function(url, dest.dir = "bin", force = FALSE) {
   if (missing(url)) {
-
     # find the latest version of fastq
     download_page <- xml2::read_html("http://www.bioinformatics.babraham.ac.uk/projects/download.html")
     link_hrefs <- download_page %>%
@@ -27,7 +26,6 @@ fastqc_install <- function(url, dest.dir = "bin", force = FALSE) {
       link_hrefs[.] %>% .[1]
     url <- paste0("http://www.bioinformatics.babraham.ac.uk/projects/",
                   fastqc_href)
-
   }
 
   if (!dir.exists(dest.dir)) {
@@ -66,6 +64,7 @@ fastqc_install <- function(url, dest.dir = "bin", force = FALSE) {
 #' @return A new directory containing the fastqc reports for each sample
 #'
 #' @import processx
+#'
 #' @examples
 #' \dontrun{
 #' # Run FastQC: generates a QC directory

@@ -4,10 +4,10 @@
 \alias{summarise_taxa}
 \title{Summarise_taxa}
 \usage{
-summarise_taxa(physeq, Rank, GroupBy = NULL)
+summarise_taxa(physeq, rank, group_by = NULL)
 }
 \arguments{
-\item{GroupBy}{}
+\item{group_by}{}
 }
 \value{
 

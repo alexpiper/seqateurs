@@ -7,7 +7,7 @@
 plot_quality(input, n = 5e+05)
 }
 \arguments{
-\item{n}{}
+\item{n}{The number of reads to sample}
 }
 \value{
 

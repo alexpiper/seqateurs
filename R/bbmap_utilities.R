@@ -11,6 +11,7 @@
 #' @export
 #'
 #' @import httr
+#' @import utils
 #' @examples
 bbmap_install <- function(url, dest.dir = "bin", force = FALSE) {
   if (missing(url)) {
@@ -76,8 +77,8 @@ bbmap_install <- function(url, dest.dir = "bin", force = FALSE) {
 #' @export
 #'
 #' @import dplyr
-#' @importFrom stringr str_split_fixed
-#' @importFrom stringr str_replace
+#' @import tibble
+#' @import stringr
 #'
 #' @examples
 #' #' \dontrun{
@@ -260,7 +261,8 @@ bbdemux <- function(install = NULL, fwd, rev = NULL, Fbarcodes = NULL, Rbarcodes
 #' @import tidyr
 #' @import readr
 #' @import purrr
-#' @importFrom stringr str_replace
+#' @import stringr
+#' @import processx
 #'
 #'
 #' @examples
@@ -417,7 +419,7 @@ bbtrim <- function(install = NULL, fwd, rev = NULL, primers, checkpairs=FALSE,
 
     # Set up quality tracking
     if (quality == TRUE) {
-      qualnames <- fwd %>% str_replace(pattern=".fastq.gz", replacement="") %>%
+      qualnames <- fwd %>% stringr::str_replace(pattern=".fastq.gz", replacement="") %>%
         basename
       qualnames <- paste0(tmp,"/", qualnames)
       quality <-
@@ -580,6 +582,7 @@ bbsplit <- function(install = NULL, files, overwrite = FALSE) {
 #' @export
 #' @import dplyr
 #' @import tidyr
+#' @import readr
 #' @import stringr
 #' @examples
 parse_bbtrim <- function(x) {
@@ -593,7 +596,7 @@ parse_bbtrim <- function(x) {
   } else (stop("Error: Sample not found in log file, try deleting temporary files"))
 
   if (any(stringr::str_detect(lines, "Input:"))){
-  input <- read_tsv(lines[which(stringr::str_sub(lines, 1, 6) == 'Input:' )], col_names = FALSE) %>%
+  input <- readr::read_tsv(lines[which(stringr::str_sub(lines, 1, 6) == 'Input:' )], col_names = FALSE) %>%
     tidyr::separate(X2, into="input_reads", sep=" ", extra="drop") %>%
     tidyr::separate(X4, into="input_bases", sep=" ", extra="drop") %>%
     dplyr::select(input_reads, input_bases) %>%
@@ -601,7 +604,7 @@ parse_bbtrim <- function(x) {
   } else (stop("Error: Input not found in log file, try deleting temporary files"))
 
   if (any(stringr::str_detect(lines, "KTrimmed:"))){
-  ktrimmed <- read_tsv(lines[which(stringr::str_sub(lines, 1, 9) == 'KTrimmed:' )], col_names = FALSE) %>%
+  ktrimmed <- readr::read_tsv(lines[which(stringr::str_sub(lines, 1, 9) == 'KTrimmed:' )], col_names = FALSE) %>%
     tidyr::separate(X2, into="ktrimmed_reads", sep=" ", extra="drop") %>%
     tidyr::separate(X3, into="ktrimmed_bases", sep=" ", extra="drop") %>%
     dplyr::select(ktrimmed_reads, ktrimmed_bases) %>%
@@ -609,7 +612,7 @@ parse_bbtrim <- function(x) {
   } else (stop("Error: Ktrimmed not found in log file, try deleting temporary files"))
 
   if (any(stringr::str_detect(lines, "Result:"))){
-  result <- read_tsv(lines[which(stringr::str_sub(lines, 1, 7) == 'Result:' )], col_names = FALSE) %>%
+  result <- readr::read_tsv(lines[which(stringr::str_sub(lines, 1, 7) == 'Result:' )], col_names = FALSE) %>%
     tidyr::separate(X2, into="output_reads", sep=" ", extra="drop") %>%
     tidyr::separate(X3, into="output_bases", sep=" ", extra="drop") %>%
     dplyr::select(output_reads, output_bases) %>%
@@ -666,6 +669,8 @@ parse_bbdemux <- function(x) {
 #' @return a tidy data frame
 #' @import purrr
 #' @import dplyr
+#' @import readr
+#' @import stringr
 #'
 #' @examples
 parse_bhist <- function(dir) {
@@ -680,9 +685,9 @@ parse_bhist <- function(dir) {
       N = col_double()
     )) %>%
     dplyr::rename(Pos = `#Pos`) %>%
-    mutate(Source = Source %>%
-             str_replace(pattern = "^(.*)\\/", replacement="")%>%
-            str_replace(pattern = "_bhist.txt", replacement=""))
+    dplyr::mutate(Source = Source %>%
+            stringr::str_remove(pattern = "^(.*)\\/") %>%
+            stringr::str_remove(pattern = "_bhist.txt"))
 
   return(out)
 }
@@ -696,6 +701,8 @@ parse_bhist <- function(dir) {
 #' @return a tidy data frame
 #' @import purrr
 #' @import dplyr
+#' @import readr
+#' @import stringr
 #'
 #' @examples
 parse_qhist <- function(dir) {
@@ -709,9 +716,9 @@ parse_qhist <- function(dir) {
       Read2_log = col_double()
     )) %>%
     dplyr::rename(Pos = `#BaseNum`) %>%
-    mutate(Source = Source %>%
-             str_replace(pattern = "^(.*)\\/", replacement="")%>%
-             str_replace(pattern = "_qhist.txt", replacement=""))
+    dplyr::mutate(Source = Source %>%
+             stringr::str_remove(pattern = "^(.*)\\/") %>%
+             stringr::str_remove(pattern = "_qhist.txt"))
 
   return(out)
 }
@@ -725,6 +732,8 @@ parse_qhist <- function(dir) {
 #' @return a tidy data frame
 #' @import purrr
 #' @import dplyr
+#' @import readr
+#' @import stringr
 #'
 #' @examples
 parse_aqhist <- function(dir) {
@@ -738,9 +747,9 @@ parse_aqhist <- function(dir) {
       fraction2 = col_double()
     ))%>%
     dplyr::rename(avg_quality = `#Quality`) %>%
-    mutate(Source = Source %>%
-             str_replace(pattern = "^(.*)\\/", replacement="")%>%
-             str_replace(pattern = "_aqhist.txt", replacement=""))
+    dplyr::mutate(Source = Source %>%
+             dplyr::str_remove(pattern = "^(.*)\\/")%>%
+               dplyr::str_remove(pattern = "_aqhist.txt"))
 
   return(out)
 }
@@ -755,6 +764,9 @@ parse_aqhist <- function(dir) {
 #' @return a tidy data frame
 #' @import purrr
 #' @import dplyr
+#' @import stringr
+#' @import readr
+#' @import tidyr
 #'
 #' @examples
 parse_gchist <- function(dir) {
@@ -764,10 +776,10 @@ parse_gchist <- function(dir) {
       X1 = col_character(),
       X2 = col_double()
     ))  %>%
-    dplyr::mutate(X1 = stringr::str_replace(`X1`, pattern="#", replacement=""),
+    dplyr::mutate(X1 = stringr::str_remove(`X1`, pattern="#"),
                   Source = Source %>%
-                    str_replace(pattern = "^(.*)\\/", replacement="")%>%
-                    str_replace(pattern = "_gchist.txt", replacement="")) %>%
+                    stringr::str_remove(pattern = "^(.*)\\/")%>%
+                    stringr::str_remove(pattern = "_gchist.txt")) %>%
     dplyr::group_by(Source) %>%
     tidyr::pivot_wider(names_from = X1, values_from = X2)
 
@@ -783,6 +795,8 @@ parse_gchist <- function(dir) {
 #' @return a tidy data frame
 #' @import purrr
 #' @import dplyr
+#' @import readr
+#' @import stringr
 #'
 #' @examples
 parse_lhist <- function(dir) {
@@ -793,9 +807,9 @@ parse_lhist <- function(dir) {
       Count = col_double()
     )) %>%
     dplyr::rename(Length = `#Length`) %>%
-    mutate(Source = Source %>%
-             str_replace(pattern = "^(.*)\\/", replacement="")%>%
-             str_replace(pattern = "_lhist.txt", replacement=""))
+    dplyr::mutate(Source = Source %>%
+             stringr::str_remove(pattern = "^(.*)\\/")%>%
+             stringr::str_remove(pattern = "_lhist.txt"))
   return(out)
 }
 

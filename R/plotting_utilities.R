@@ -3,7 +3,7 @@
 #' Get qual stats
 #'
 #' @param input
-#' @param n
+#' @param n The number of reads to sample
 #'
 #' @return
 #' @export
@@ -111,7 +111,7 @@ get_qual_stats <- function (input, n = 5e+05) {
 #' Quality plot
 #'
 #' @param input
-#' @param n
+#' @param n The number of reads to sample
 #'
 #' @return
 #' @export
@@ -182,6 +182,12 @@ plot_maxEE <- function(input, n = 5e+05) {
 #'
 #' @return
 #' @export
+#' @import ShortRead
+#' @import magrittr
+#' @import dplyr
+#' @import tibble
+#' @import tidyr
+#' @import ggplot2
 #'
 #' @examples
 plot_lengths <- function(dir, aggregate = FALSE, sample = 1e6){
@@ -191,26 +197,26 @@ plot_lengths <- function(dir, aggregate = FALSE, sample = 1e6){
   lengths <- vector("list", length=length(Forward))
   for(i in 1:length(Forward)){
     #Forwrard reads
-    sampler <- FastqSampler(Forward[[i]], n=sample )
-    Ffq <- as.data.frame(table(width(yield(sampler))), stringsAsFactors=FALSE) %>%
+    sampler <- ShortRead::FastqSampler(Forward[[i]], n=sample )
+    Ffq <- as.data.frame(table(width(ShortRead::yield(sampler))), stringsAsFactors=FALSE) %>%
       magrittr::set_colnames(c("Readlength", "Forward")) %>%
-      mutate_if(is.character, as.integer)
+      dplyr::mutate_if(is.character, as.integer)
     #Reverse reads
-    sampler <- FastqSampler(Reverse[[i]], n=sample )
-    Rfq <- as.data.frame(table(width(yield(sampler))), stringsAsFactors=FALSE) %>%
+    sampler <- ShortRead::FastqSampler(Reverse[[i]], n=sample )
+    Rfq <- as.data.frame(table(width(ShortRead::yield(sampler))), stringsAsFactors=FALSE) %>%
       magrittr::set_colnames(c("Readlength", "Reverse"))%>%
-      mutate_if(is.character, as.integer)
+      dplyr::mutate_if(is.character, as.integer)
 
-    lengths[[i]] <- tibble(Readlength=seq(1, max(max(Ffq$Readlength), max(Rfq$Readlength)),1)) %>%
-      left_join(Ffq, by="Readlength") %>%
-      left_join(Rfq, by="Readlength")
+    lengths[[i]] <- tibble::tibble(Readlength=seq(1, max(max(Ffq$Readlength), max(Rfq$Readlength)),1)) %>%
+      dplyr::left_join(Ffq, by="Readlength") %>%
+      dplyr::left_join(Rfq, by="Readlength")
     lengths[[i]]$source <- Forward[i]
   }
 
   p <- do.call(rbind, lengths) %>%
-    group_by(Readlength, source) %>%
-    summarise(Forward = sum(Forward), Reverse = sum(Reverse)) %>%
-    pivot_longer(cols=3:4,
+    dplyr::group_by(Readlength, source) %>%
+    dplyr::summarise(Forward = sum(Forward), Reverse = sum(Reverse)) %>%
+    tidyr::pivot_longer(cols=3:4,
                  names_to = "Direction",
                  values_to = "Count") %>%
     ggplot(aes(x=Readlength, y=Count, group=Direction, fill=Direction)) +
@@ -296,6 +302,7 @@ estimate_trunclen <- function (fwd, rev = NULL, threshold = 25, maxlength, minle
 #'
 #' @return
 #' @export
+#' @importFrom dada2 nwalign
 #'
 #' @examples
 align_overlap <- function(query, ref) {
@@ -316,21 +323,22 @@ align_overlap <- function(query, ref) {
 #'
 #' @return
 #' @export
+#' @import ShortRead
 #'
 #' @examples
 n_overlap <- function(fwd, rev, sample = 100) {
 
   #Sample reads
-  fF <- FastqStreamer(fwd, n=sample)
+  fF <- ShortRead::FastqStreamer(fwd, n=sample)
   on.exit(close(fF))
-  set.seed(123L);fqF <- yield(fF)
+  set.seed(123L);fqF <- ShortRead::yield(fF)
 
-  fR <- FastqStreamer(rev, n=sample)
+  fR <- ShortRead::FastqStreamer(rev, n=sample)
   on.exit(close(fR), add=TRUE)
-  set.seed(123L);fqR <- yield(fR)
+  set.seed(123L);fqR <- ShortRead::yield(fR)
 
   #Nfilter
-  keep <- nFilter()(fqF) & nFilter()(fqR)
+  keep <- ShortRead::nFilter()(fqF) & ShortRead::nFilter()(fqR)
   fqF <- fqF[keep]
   fqR <- fqR[keep]
 
@@ -346,34 +354,6 @@ n_overlap <- function(fwd, rev, sample = 100) {
   return(overlap)
 }
 
-
-# Summarise_index ---------------------------------------------------------
-
-
-#' Summarise index
-#'
-#' @param fq A path to a fastq file
-#' @param qualityType The quality encoding of the fastq file
-#'
-#' @return
-#' @export
-#'
-#' @examples
-summarise_index <- function(fq, qualityType = "Auto") {
-  fF <- ShortRead::FastqStreamer(fq)
-  on.exit(close(fF))
-  
-  #Stream through fasta
-  while( length(suppressWarnings(fqF <- yield(fF, qualityType = qualityType)))) {
-    idF <- ShortRead::id(fqF)
-  }
-  index <- stringr::str_extract(as.character(idF), pattern="(?!:)(?:.(?!:))+$") %>%
-    table() %>%
-    as.data.frame() %>%
-    tidyr::separate(col=1, into=c("index", "index2")) %>%
-    dplyr::arrange(desc(Freq))
-  return(index)
-}
 
 
 

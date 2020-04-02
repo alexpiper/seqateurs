@@ -1,14 +1,36 @@
 Package: seqateurs
-Title: What the Package Does (One Line, Title Case)
+Title: Tools for trimming and processing sequence data
 Version: 0.0.0.9000
 Authors@R: 
-    person(given = "First",
-           family = "Last",
+    person(given = "Alexander",
+           family = "Piper",
            role = c("aut", "cre"),
-           email = "first.last@example.com",
+           email = "alexander.piper@agriculture.vic.gov.au",
            comment = c(ORCID = "YOUR-ORCID-ID"))
-Description: What the package does (one paragraph).
+Description: This package contains functions that supplement the DADA2 and Phyloseq packages for robust analysis of metabarcoding or other amplicon sequencing data
 License: What license it uses
 Encoding: UTF-8
 LazyData: true
-RoxygenNote: 7.0.2
+RoxygenNote: 7.1.0
+Imports: 
+    Biostrings,
+    DECIPHER,
+    ShortRead,
+    XML,
+    data.table,
+    dplyr,
+    ggplot2,
+    httr,
+    magrittr,
+    phyloseq,
+    processx,
+    purrr,
+    readr,
+    rvest,
+    stringdist,
+    stringr,
+    tibble,
+    tidyr,
+    utils,
+    xml2,
+    dada2
