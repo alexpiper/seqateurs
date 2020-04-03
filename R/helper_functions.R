@@ -209,4 +209,37 @@ cluster_otus <- function(seqtab, method="complete", similarity=0.97, rename=FALS
   return(merged_seqtab)
 }
 
+# Propagate taxonomic assignments to species level ------------------------
+
+#' Propagate taxonomy
+#'
+#' @param tax
+#' @param from
+#'
+#' @return
+#' @export
+#'
+#' @examples
+propagate_tax <- function(tax, from = "Family") {
+  col.prefix <- substr(colnames(tax), 1, 1) # Assumes named Kingdom, ...
+
+  # Highest level to propagate from
+  if (from == "Phylum") (start <- 2)
+  if (from == "Class") (start <- 3)
+  if (from == "Order") (start <- 4)
+  if (from == "Family") (start <- 5)
+  if (from == "Genus") (start <- 6)
+  if (from == "Species") (start <- 7)
+
+  # Propagate
+  for (col in seq(start, ncol(tax))) {
+    prop <- is.na(tax[, col]) & !is.na(tax[, col - 1])
+    newtax <- tax[prop, col - 1]
+    needs.prefix <- !grepl("^[A-z]__", newtax)
+    newtax[needs.prefix] <- paste(col.prefix[col - 1], newtax[needs.prefix], sep = "__")
+    tax[prop, col] <- newtax
+  }
+  tax
+}
+
 
