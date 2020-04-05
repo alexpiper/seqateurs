@@ -4,15 +4,16 @@
 \alias{ps_to_fasta}
 \title{output a FASTA file from a phyloseq object}
 \usage{
-ps_to_fasta(ps = ps, out.file = NULL, rank = NULL, width = 1000, ...)
+ps_to_fasta(ps = ps, out.file = NULL, seqnames = "unique", width = 1000, ...)
 }
 \arguments{
 \item{ps}{A \code{phyloseq} object that contains \code{\link[phyloseq]{refseq}}.
 If there the \code{refseq} slot is not filled, this function will try pull the
 sequences from \code{\link[phyloseq]{get_taxa}}}
 
-\item{rank}{(optional) A taxonomic rank from the \code{\link[phyloseq]{tax_table}} which will be used to name the sequences.
-If no rank is supplied, samples will be named \code{ASV_#}}
+\item{seqnames}{(optional) A taxonomic rank from the \code{\link[phyloseq]{tax_table}} which will be used to name the sequences.
+alternatively "unique" will uniquely name the sequences as \code{ASV_#},
+"sequence" will name the sequences in the fasta exactly the same same as the sequence, usfull for LULU curation.}
 
 \item{width}{(Default 1000) The number of characters in each fasta line before wrapping occurs}
 

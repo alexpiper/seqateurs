@@ -11,8 +11,9 @@
 #' @param file (optional) A file name that ends in ".fasta" or ".fa".
 #' If a file name is not supplied, the file will be named after the phyloseq object.
 #'
-#' @param rank (optional) A taxonomic rank from the \code{\link[phyloseq]{tax_table}} which will be used to name the sequences.
-#' If no rank is supplied, samples will be named \code{ASV_#}
+#' @param seqnames (optional) A taxonomic rank from the \code{\link[phyloseq]{tax_table}} which will be used to name the sequences.
+#' alternatively "unique" will uniquely name the sequences as \code{ASV_#},
+#' "sequence" will name the sequences in the fasta exactly the same same as the sequence, usfull for LULU curation.
 #'
 #' @param width (Default 1000) The number of characters in each fasta line before wrapping occurs
 #'
@@ -26,39 +27,37 @@
 #' @examples
 #' save_fasta(ps)
 #' save_fasta(ps = ps, file = "sequences.fasta", rank = "Genus")
-
-ps_to_fasta <- function(ps = ps, out.file = NULL, rank = NULL, width = 1000, ...){
-
+ps_to_fasta <- function(ps = ps, out.file = NULL, seqnames = "unique", width = 1000, ...){
   if (is.null(ps)){
     message("Phyloseq object not found.")
   }
 
   if (is.null(out.file)){
-    out.file <- paste0(deparse(substitute(ps)), ".fasta")
+    out.file <- paste0(deparse(substitute(ps)), ".fa")
   }
 
   if (!is.null(phyloseq::refseq(ps, errorIfNULL = FALSE))){
     seqs <- Biostrings::DNAStringSet(as.vector(phyloseq::refseq(ps)))
   } else{
-    message("refseq() not found. Using taxa names for sequences.")
+    message("refseq() not found. Using tax_table rownames for sequences.")
     if (sum(grepl("[^ACTG]", rownames(phyloseq::tax_table(ps)))) > 0){
       stop("Error: Taxa do not appear to be DNA sequences.")
     }
     seqs <- Biostrings::DNAStringSet(colnames(phyloseq::get_taxa(ps)))
   }
 
-  if (is.null(rank) || !rank %in% phyloseq::rank_names(ps)){
+  if(seqnames %in% phyloseq::rank_names(ps)){
+    names(seqs) <- make.unique(unname(phyloseq::tax_table(ps)[,seqnames]), sep = "_")
+  } else if(seqnames == "unique" || is.null(seqnames) ){
     message("Rank not found. Naming sequences sequentially (i.e. ASV_#).")
     names(seqs) <- paste0("ASV_", 1:phyloseq::ntaxa(ps))
-  } else {
-    names(seqs) <- make.unique(unname(phyloseq::tax_table(ps)[,rank]), sep = "_")
+  } else if(seqnames == "sequence"){
+    names(seqs) <- as.character(seqs)
   }
 
   Biostrings::writeXStringSet(seqs, filepath = out.file, width=width, ... = ...)
   message(paste0(phyloseq::ntaxa(ps), " sequences written to <", out.file, ">."))
 }
-
-
 
 # Fast melt ---------------------------------------------------------------
 #' Fast melt
