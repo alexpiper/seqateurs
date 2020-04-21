@@ -27,23 +27,23 @@ create_samplesheet <- function(SampleSheets, runParameters){
   for (i in 1:length(SampleSheets)){
 
     #detect format for run
-    if(any(str_detect(read_lines(runParameters[i]), "MiSeq"))){
+    if(any(stringr::str_detect(readr::read_lines(runParameters[i]), "MiSeq"))){
       format <- "miseq"
       sampleskip <- 20
       header_n_max <- 19
       reads_skip <- 12
-    } else if (any(str_detect(read_lines(runParameters[i]), "novaseq"))){
+    } else if (any(stringr::str_detect(readr::read_lines(runParameters[i]), "novaseq"))){
       format <- "novaseq"
       sampleskip = 19
       header_n_max = 18
       reads_skip = 11
-    } else if (any(str_detect(read_lines(runParameters[i]), "hiseq"))){
+    } else if (any(stringr::str_detect(readr::read_lines(runParameters[i]), "hiseq"))){
       format <- "hiseq"
       stop("Error: HiSeq not currently supported")
-    } else if (any(str_detect(read_lines(runParameters[i]), "nextseq"))){
+    } else if (any(stringr::str_detect(readr::read_lines(runParameters[i]), "nextseq"))){
       format <- "nextseq"
       stop("Error: NextSeq not currently supported")
-    } else if (any(str_detect(read_lines(runParameters[i]), "iseq"))){
+    } else if (any(stringr::str_detect(readr::read_lines(runParameters[i]), "iseq"))){
       format <- "iseq"
       stop("Error: iSeq not currently supported")
     } else(
@@ -62,10 +62,8 @@ create_samplesheet <- function(SampleSheets, runParameters){
     ))
 
     withCallingHandlers({ # Handle Annoying missing columns function
-      sample_header <- readr::read_csv(SampleSheets[i], n_max=header_n_max, col_types = cols_only(
-        `[Header]` = col_character(),
-        `X2` = col_character()
-      )) %>%
+      sample_header <- readr::read_csv(SampleSheets[i], n_max=header_n_max) %>%
+        dplyr::select(1:2) %>%
         magrittr::set_colnames(c("var", "value")) %>%
         tidyr::drop_na(var) %>%
         dplyr::mutate(var = var %>%
@@ -96,19 +94,19 @@ create_samplesheet <- function(SampleSheets, runParameters){
     if(format == "miseq"){
       run_params <- run_params %>%
         dplyr::mutate(FlowCellExpiry = FlowcellRFIDTag %>%
-                        str_replace("^.{0,23}", "") %>%
-                        str_replace(".{0,9}$", "") %>%
+                        stringr::str_replace("^.{0,23}", "") %>%
+                        stringr::str_replace(".{0,9}$", "") %>%
                         as.Date(),
                       ReagentKitExpiry = ReagentKitRFIDTag %>%
-                        str_replace("^.{0,23}", "") %>%
-                        str_replace(".{0,9}$", "") %>%
+                        stringr::str_replace("^.{0,23}", "") %>%
+                        stringr::str_replace(".{0,9}$", "") %>%
                         as.Date(),
                       PR2Expiry = PR2BottleRFIDTag %>%
-                        str_replace("^.{0,23}", "") %>%
-                        str_replace(".{0,9}$", "") %>%
+                        stringr::str_replace("^.{0,23}", "") %>%
+                        stringr::str_replace(".{0,9}$", "") %>%
                         as.Date(),
                       FCID = Barcode %>%
-                        str_replace("^.{0,10}", ""),
+                        stringr::str_replace("^.{0,10}", ""),
                       RunStartDate = lubridate::ymd(RunStartDate)
         ) %>%
         dplyr::rename( InstrumentName = ScannerID
@@ -126,7 +124,6 @@ create_samplesheet <- function(SampleSheets, runParameters){
           PR2Expiry,
           MostRecentWashType) %>%
         dplyr::mutate_if(is.factor, as.character)
-
 
     } else if(format == "novaseq"){
       run_params <- run_params %>%
