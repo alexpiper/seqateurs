@@ -23,7 +23,7 @@ create_samplesheet <- function(SampleSheet, runParameters, template = "V4"){
 
   #Parse files
   merged <- purrr::map2(SampleSheet, runParameters, parse_seqrun) %>%
-    dplyr::bind_rows(combined)
+    dplyr::bind_rows()
 
   # Reformat to the format required
   if (is.character(template) && template=="V4"){
@@ -80,7 +80,7 @@ create_logsheet <- function(SampleSheet, runParameters){
 
   #Parse files
   merged <- purrr::map2(SampleSheet, runParameters, parse_seqrun) %>%
-    dplyr::bind_rows(combined)
+    dplyr::bind_rows()
 
   out <- merged %>%
     janitor::clean_names()%>%
