@@ -4,10 +4,16 @@
 \alias{create_samplesheet}
 \title{Create Samplesheet}
 \usage{
-create_samplesheet(SampleSheets, runParameters)
+create_samplesheet(SampleSheet, runParameters, template = "V4")
 }
 \arguments{
-\item{runParameters}{}
+\item{SampleSheet}{A samplesheet or set of samplesheets in MiSeq or NovaSeq format}
+
+\item{runParameters}{A runParamers.xml or set of these output by the sequencer}
+
+\item{template}{The output format you would like.
+This can be a character referring to the version of the sample sheet (currently only "V4" is supported)
+Or a data.frame input to use as a template}
 }
 \value{
 

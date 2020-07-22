@@ -242,3 +242,48 @@ propagate_tax <- function(tax, from = "Family") {
 }
 
 
+# Coalescing join ---------------------------------------------------------
+
+#' Coalescing join
+#'
+#' @description A join to combine datasets containing identical non-key columns in varying states of completeness
+#' @param x The primary data frame or tibble from which values will be prefered
+#' @param y The secondary data frame or tibble from which values will only be used when values in x are NA
+#' @param by A character vector of columns to join by.
+#' @param suffix The suffixes from the dplyr join to remove.
+#' @param join The type of dplyr join to perform
+#' @param ...
+#'
+#' @import purrr
+#' @import dplyr
+#'
+#' @return
+#' @export
+#'
+#' @examples
+coalesce_join <- function(x, y,
+                          by = NULL, suffix = c(".x", ".y"),
+                          join = dplyr::full_join, ...) {
+  joined <- join(x, y, by = by, suffix = suffix, ...)
+  # names of desired output
+  cols <- union(names(x), names(y))
+
+  to_coalesce <- names(joined)[!names(joined) %in% cols]
+  suffix_used <- suffix[ifelse(endsWith(to_coalesce, suffix[1]), 1, 2)]
+  # remove suffixes and deduplicate
+  to_coalesce <- unique(substr(
+    to_coalesce,
+    1,
+    nchar(to_coalesce) - nchar(suffix_used)
+  ))
+
+  coalesced <- purrr::map_dfc(to_coalesce, ~dplyr::coalesce(
+    joined[[paste0(.x, suffix[1])]],
+    joined[[paste0(.x, suffix[2])]]
+  ))
+  names(coalesced) <- to_coalesce
+
+  dplyr::bind_cols(joined, coalesced)[cols]
+}
+
+
