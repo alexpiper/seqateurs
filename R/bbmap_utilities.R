@@ -287,6 +287,7 @@ bbtrim <- function(install = NULL, fwd, rev = NULL, primers, checkpairs=FALSE,
   tmplogs <- paste0(tmp, "/bbtrim.log")
   if(file.exists(tmplogs)) { file.remove(tmplogs)}
 
+
   bbduk <- function(install = NULL, fwd, rev = NULL, primers, checkpairs = FALSE,
                     restrictleft = NULL, out.dir = "bbduk", trim.end = "left", ordered = TRUE,
                     kmer = NULL, mink = FALSE, tbo= TRUE, tpe = TRUE, hdist = 0, degenerate = TRUE,
@@ -399,22 +400,34 @@ bbtrim <- function(install = NULL, fwd, rev = NULL, primers, checkpairs=FALSE,
 
     # Check pairing
     if(checkpairs == TRUE){
+
+      if (.Platform$OS.type == "unix") {
+        reformat_args <- paste(in1, in2, "vpair", collapse = " ")
+        # Run Reformatreads
+        result <- processx::run(command=paste0(install, "/reformat.sh"),
+                                args = reformat_args,
+                                echo=quiet,
+                                echo_cmd	= quiet,
+                                spinner=TRUE,
+                                windows_verbatim_args=TRUE,
+                                error_on_status = TRUE,
+                                cleanup_tree = TRUE)
+
+      } else{
       reformat_args <- paste(" -cp ", paste0(install, "/current jgi.ReformatReads "), in1, in2, "vpair", collapse = " ")
       # Run Reformatreads
-
       result <- processx::run(command="java",
                               args = reformat_args,
                               echo=quiet,
                               echo_cmd	= quiet,
                               spinner=TRUE,
                               windows_verbatim_args=TRUE,
-                              error_on_status = FALSE,
+                              error_on_status = TRUE,
                               cleanup_tree = TRUE)
-
+      }
       if(stringr::str_detect(result$stderr, "Names do not appear to be correctly paired.")){
         stop(message(paste0("ERROR: ", fwd, " and ", rev, " do not appear to be correctly paired")))
       } else ( message("Reads are correctly paired"))
-
     }
 
     # Set up quality tracking
@@ -432,30 +445,32 @@ bbtrim <- function(install = NULL, fwd, rev = NULL, primers, checkpairs=FALSE,
     } else {
       (quality <- "")
     }
+
+    if (.Platform$OS.type == "unix") {
+      args <- paste( in1, in2, literal, restrictleft, out, out1,
+                    out2, kmer, mink, hdist, trim.end,tbo, tpe, degenerate, quality,
+                    maxlength, overwrite, "-da",
+                    collapse = " "
+      )
+      result <- system2(command=paste0(install, "/bbduk.sh"),
+                        args = args,
+                        stdout = tmpout,
+                        stderr = tmperr,
+                        wait=TRUE)
+    }else{
+      # Run Reformatreads
     args <- paste(" -cp ", paste0(install, "/current jgi.BBDuk "), in1, in2, literal, restrictleft, out, out1,
                   out2, kmer, mink, hdist, trim.end,tbo, tpe, degenerate, quality,
                   maxlength, overwrite, "-da",
                   collapse = " "
     )
 
-    # Run bbduk
-    #result <- processx::run(command="java",
-    #                        args = args,
-    #                        stdout = tmpout,
-    #                        stderr = tmperr,
-    #                        echo=quiet,
-    #                        echo_cmd	= quiet,
-    #                        spinner=TRUE,
-    #                        windows_verbatim_args=TRUE,
-    #                       error_on_status = FALSE,
-    #                        cleanup_tree = TRUE)
-
-
    result <- system2(command="java",
                      args = args,
                      stdout = tmpout,
                      stderr = tmperr,
                      wait=TRUE)
+    }
     now <- date()
     cat(paste0("Executed: ", now, "\n"), file = tmplogs, append=TRUE)
     cat(paste0("Sample:\t", fwd, "\n"), file = tmplogs, append=TRUE)
