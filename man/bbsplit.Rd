@@ -4,15 +4,14 @@
 \alias{bbsplit}
 \title{Split interleaved reads}
 \usage{
-bbsplit(install = NULL, files, overwrite = FALSE)
+bbsplit(install = NULL, files, force = FALSE)
 }
 \arguments{
 \item{install}{(Required) Install location for bbmap}
 
 \item{files}{(Required) Vector of locations of interleaved read files to split}
 
-\item{overwrite}{(Optional) Default TRUE
-Option to overwrite existing output files.}
+\item{force}{(Optional) Default TRUE Option to overwrite existing output files.}
 }
 \value{
 

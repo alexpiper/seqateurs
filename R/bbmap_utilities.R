@@ -528,17 +528,14 @@ bbtrim <- function(install = NULL, fwd, rev = NULL, primers, checkpairs=FALSE,
 #' Split interleaved reads
 #'
 #' @param install (Required) Install location for bbmap
-#'
 #' @param files (Required) Vector of locations of interleaved read files to split
-#'
-#' @param overwrite (Optional) Default TRUE
-#' Option to overwrite existing output files.
+#' @param force (Optional) Default TRUE Option to overwrite existing output files.
 #'
 #' @return
 #' @export
 #' @import stringr
 #'
-bbsplit <- function(install = NULL, files, overwrite = FALSE) {
+bbsplit <- function(install = NULL, files, force = FALSE) {
   nsamples <- length(files)
   # Create temp files
   tmp <- tempdir()
@@ -546,40 +543,49 @@ bbsplit <- function(install = NULL, files, overwrite = FALSE) {
   tmpout <- paste0(tmp,"/stdout.log")
   tmperr <- paste0(tmp,"/stderr.log")
 
-
-  bbtools_reformatreads <- function(install = NULL, file, overwrite = FALSE) {
+  bbtools_reformatreads <- function(install = NULL, file, force = FALSE) {
     # Split interleaved reads
     out1 <- paste0("out1=", file %>% str_replace(pattern = "_R1R2_", replacement = "_R1_"))
     out2 <- paste0("out2=", file %>% str_replace(pattern = "_R1R2_", replacement = "_R2_"))
 
-    if (overwrite == TRUE) {
-      overwrite <- "overwrite=TRUE"
+    if (force == TRUE) {
+      force <- "overwrite=TRUE"
     } else {
-      (overwrite <- "")
+      (force <- "")
     }
 
-    reformat_args <- paste(" -cp ", paste0(install, "/current jgi.ReformatReads "), file, out1, out2, overwrite, collapse = " ")
+    if (.Platform$OS.type == "unix") {
+      reformat_args <- paste(file, out1, out2, force, collapse = " ")
 
-    # Run Reformatreads
-    result <- system2(command="java",
-                      args = reformat_args,
-                      stdout=tmpout,
-                      stderr=tmperr,
-                      wait=TRUE)
+      result <- system2(command=paste0(install, "/reformat.sh"),
+                        args = reformat_args,
+                        stdout = tmpout,
+                        stderr = tmperr,
+                        wait=TRUE)
+     } else{
+
+      reformat_args <- paste(" -cp ", paste0(install, "/current jgi.ReformatReads "),
+                             file, out1, out2, force, collapse = " ")
+
+      # Run Reformatreads
+      result <- system2(command="java",
+                        args = reformat_args,
+                        stdout=tmpout,
+                        stderr=tmperr,
+                        wait=TRUE)
+      }
     now <- date()
-    cat(paste0("Executed: ", now, "\n"), file="logs/bbreformat.log", append=TRUE)
     file.append(tmplogs, tmperr)
     file.remove(c(tmpout, tmperr))
-
   }
 
   if (nsamples > 1) {
     for (i in 1:nsamples) {
-      bbtools_reformatreads(install = install, file = files[i], overwrite = overwrite)
+      bbtools_reformatreads(install = install, file = files[i], force = force)
       file.remove(files[i])
     }
   } else if (nsamples == 1) {
-    bbtools_reformatreads(install = install, file = files, overwrite = overwrite)
+    bbtools_reformatreads(install = install, file = files, force = force)
     file.remove(files)
   }
 }
