@@ -15,7 +15,7 @@ bbdemux(
   kmer = NULL,
   hdist = 0,
   degenerate = TRUE,
-  overwrite = TRUE,
+  force = TRUE,
   threads = NULL,
   mem = NULL,
   interleaved = FALSE
@@ -46,7 +46,7 @@ The kmer size to use for primer searching.}
 \item{degenerate}{(Optional) Default TRUE.
 Option to search for all possible primer combinations for degenerate primers}
 
-\item{overwrite}{(Optional) Default TRUE
+\item{force}{(Optional) Default TRUE
 Option to overwrite existing output files.}
 
 \item{threads}{(Optional) Default autodetect
@@ -77,7 +77,7 @@ fastqRs <- sort(list.files(path, pattern="R2_001.*", full.names = TRUE))
 bbdemux(install="bin/bbmap", fwd=fastqFs, rev=fastqRs,Fbarcodes = c("GAGGDACW","TGTGGDAC","AGAAGGDAC"),
               Rbarcodes = c("ACGTRATW","TCCGTRAT","CTGCGTRA"),
               degenerate=TRUE, out.dir=demuxpath, threads=1, mem=4,
-              hdist=0, overwrite=TRUE)
+              hdist=0, force=TRUE)
               }
 
 }

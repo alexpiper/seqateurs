@@ -62,7 +62,7 @@ bbmap_install <- function(url, dest.dir = "bin", force = FALSE) {
 #' @param hdist (Optional) Default = 0. The hamming distance (number of substitution errors) allowed for mismatch to the query primer.
 #' @param degenerate (Optional) Default TRUE.
 #' Option to search for all possible primer combinations for degenerate primers
-#' @param overwrite (Optional) Default TRUE
+#' @param force (Optional) Default TRUE
 #' Option to overwrite existing output files.
 #' @param interleaved (Optional) Default FALSE
 #' Option to input interleaved reads
@@ -91,12 +91,12 @@ bbmap_install <- function(url, dest.dir = "bin", force = FALSE) {
 #' bbdemux(install="bin/bbmap", fwd=fastqFs, rev=fastqRs,Fbarcodes = c("GAGGDACW","TGTGGDAC","AGAAGGDAC"),
 #'               Rbarcodes = c("ACGTRATW","TCCGTRAT","CTGCGTRA"),
 #'               degenerate=TRUE, out.dir=demuxpath, threads=1, mem=4,
-#'               hdist=0, overwrite=TRUE)
+#'               hdist=0, force=TRUE)
 #'               }
 #'
 bbdemux <- function(install = NULL, fwd, rev = NULL, Fbarcodes = NULL, Rbarcodes = NULL,
                     restrictleft = NULL, out.dir = "demux", kmer = NULL, hdist = 0, degenerate = TRUE,
-                    overwrite = TRUE, threads = NULL, mem = NULL, interleaved = FALSE) {
+                    force = TRUE, threads = NULL, mem = NULL, interleaved = FALSE) {
   nsamples <- length(fwd)
   # Create temp files
   tmp <- tempdir()
@@ -107,7 +107,7 @@ bbdemux <- function(install = NULL, fwd, rev = NULL, Fbarcodes = NULL, Rbarcodes
 
   bbtools_seal <- function(install = NULL, fwd, rev = NULL, Fbarcodes = NULL, Rbarcodes = NULL,
                            restrictleft = NULL, out.dir = "demux", kmer = NULL, hdist = 0, degenerate = TRUE,
-                           overwrite = TRUE, mem = NULL, threads = NULL) {
+                           force = TRUE, mem = NULL, threads = NULL) {
     in1 <- paste0("in=", fwd)
     if (!is.null(rev)) {
       in2 <- paste0("in2=", rev)
@@ -152,10 +152,10 @@ bbdemux <- function(install = NULL, fwd, rev = NULL, Fbarcodes = NULL, Rbarcodes
       (degenerate <- "")
     }
 
-    if (overwrite == TRUE) {
-      overwrite <- "overwrite=TRUE"
+    if (force == TRUE) {
+      force <- "overwrite=TRUE"
     } else {
-      (overwrite <- "")
+      (force <- "")
     }
 
     if (!is.null(threads)) {
@@ -172,7 +172,7 @@ bbdemux <- function(install = NULL, fwd, rev = NULL, Fbarcodes = NULL, Rbarcodes
 
     args <- paste(" -cp ", paste0(install, "/current jgi.Seal"), mem, in1, in2, ref,
                   restrictleft, pattern, kmer, hdist,
-                  degenerate, overwrite, threads, "kpt=t",
+                  degenerate, force, threads, "kpt=t",
                   collapse = " "
     )
 
@@ -194,14 +194,14 @@ bbdemux <- function(install = NULL, fwd, rev = NULL, Fbarcodes = NULL, Rbarcodes
       bbtools_seal(
         install = install, fwd = fwd[i], rev = rev[i], Fbarcodes = Fbarcodes, Rbarcodes = Rbarcodes,
         restrictleft = restrictleft, out.dir = out.dir, kmer = kmer, hdist = hdist, degenerate = degenerate,
-        overwrite = overwrite, threads = threads, mem = mem
+        force = force, threads = threads, mem = mem
       )
     }
   } else if (nsamples == 1) {
     bbtools_seal(install, fwd, rev,
                  Fbarcodes = Fbarcodes, Rbarcodes = Rbarcodes, restrictleft = restrictleft,
                  out.dir = out.dir, kmer = kmer, hdist = hdist, degenerate = degenerate,
-                 overwrite = overwrite, threads = threads, mem = mem
+                 force = force, threads = threads, mem = mem
     )
   }
   #clean up
@@ -244,7 +244,7 @@ bbdemux <- function(install = NULL, fwd, rev = NULL, Fbarcodes = NULL, Rbarcodes
 #' Trim pairs evenly. When kmer right-trimming, trim both reads to the minimum length of either.
 #' @param degenerate (Optional) Default TRUE.
 #' Option to search for all possible primer combinations for degenerate primers
-#' @param overwrite (Optional) Default TRUE
+#' @param force (Optional) Default TRUE
 #' Option to overwrite existing output files.
 #' @param quality (Optional) Default FALSE
 #' Output quality statistics from trimming including:
@@ -275,12 +275,12 @@ bbdemux <- function(install = NULL, fwd, rev = NULL, Fbarcodes = NULL, Rbarcodes
 #'bbtrim(install="bin/bbmap", fwd=fastqFs, rev=fastqRs,
 #' primers=c("GGDACWGGWTGAACWGTWTAYCCHCC","GTRATWGCHCCDGCTARWACWGG"),
 #'  degenerate=TRUE, out.dir="trimmed", ktrim="left", ordered=TRUE,
-#'   mink=FALSE, hdist=2, maxlength=140, overwrite=TRUE)
+#'   mink=FALSE, hdist=2, maxlength=140, force=TRUE)
 #'}
 bbtrim <- function(install = NULL, fwd, rev = NULL, primers, checkpairs=FALSE,
                    restrictleft = NULL, out.dir = "bbduk", trim.end = "left", ordered = TRUE,
                    kmer = NULL, mink = FALSE, tbo= TRUE, tpe = TRUE, hdist = 0, degenerate = TRUE,
-                   overwrite = TRUE, quality = FALSE, maxlength = NULL, tmp=NULL, quiet=FALSE) {
+                   force = TRUE, quality = FALSE, maxlength = NULL, tmp=NULL, quiet=FALSE) {
   nsamples <- length(fwd)
   # Create temp files
   if(is.null(tmp)) {tmp <- tempdir()}
@@ -291,7 +291,7 @@ bbtrim <- function(install = NULL, fwd, rev = NULL, primers, checkpairs=FALSE,
   bbduk <- function(install = NULL, fwd, rev = NULL, primers, checkpairs = FALSE,
                     restrictleft = NULL, out.dir = "bbduk", trim.end = "left", ordered = TRUE,
                     kmer = NULL, mink = FALSE, tbo= TRUE, tpe = TRUE, hdist = 0, degenerate = TRUE,
-                    overwrite = TRUE, quality = FALSE, maxlength = NULL, tmp=NULL, quiet=FALSE) {
+                    force = TRUE, quality = FALSE, maxlength = NULL, tmp=NULL, quiet=FALSE) {
     #install <- paste0(install, "/current jgi.BBDuk")
 
     if(!quiet) {message(paste0("Trimming primers from: ", fwd, " and ", rev))}
@@ -380,10 +380,10 @@ bbtrim <- function(install = NULL, fwd, rev = NULL, primers, checkpairs=FALSE,
       (degenerate <- "")
     }
 
-    if (overwrite == TRUE) {
-      overwrite <- "overwrite=TRUE"
+    if (force == TRUE) {
+      force <- "overwrite=TRUE"
     } else {
-      (overwrite <- "")
+      (force <- "")
     }
 
     if (tpe == TRUE) {
@@ -449,7 +449,7 @@ bbtrim <- function(install = NULL, fwd, rev = NULL, primers, checkpairs=FALSE,
     if (.Platform$OS.type == "unix") {
       args <- paste( in1, in2, literal, restrictleft, out, out1,
                      out2, kmer, mink, hdist, trim.end,tbo, tpe, degenerate, quality,
-                     maxlength, overwrite, "-da",
+                     maxlength, force, "-da",
                      collapse = " "
       )
       result <- system2(command=paste0(install, "/bbduk.sh"),
@@ -461,7 +461,7 @@ bbtrim <- function(install = NULL, fwd, rev = NULL, primers, checkpairs=FALSE,
       # Run Reformatreads
       args <- paste(" -cp ", paste0(install, "/current jgi.BBDuk "), in1, in2, literal, restrictleft, out, out1,
                     out2, kmer, mink, hdist, trim.end,tbo, tpe, degenerate, quality,
-                    maxlength, overwrite, "-da",
+                    maxlength, force, "-da",
                     collapse = " "
       )
 
@@ -485,7 +485,7 @@ bbtrim <- function(install = NULL, fwd, rev = NULL, primers, checkpairs=FALSE,
             out.dir = out.dir, trim.end = trim.end, ordered = ordered,
             kmer = kmer, mink = mink, tbo=tbo, tpe = tpe, hdist = hdist,
             degenerate = degenerate, quality = quality,
-            overwrite = overwrite, maxlength = maxlength, tmp=tmp, quiet=quiet)
+            force = force, maxlength = maxlength, tmp=tmp, quiet=quiet)
     }
   } else if (nsamples == 1) {
     bbduk(install = install, fwd = fwd, rev = rev, checkpairs=checkpairs,
@@ -493,7 +493,7 @@ bbtrim <- function(install = NULL, fwd, rev = NULL, primers, checkpairs=FALSE,
           out.dir = out.dir, trim.end = trim.end, ordered = ordered,
           kmer = kmer, mink = mink, tbo=tbo, tpe = tpe, hdist = hdist,
           degenerate = degenerate, quality = quality,
-          overwrite = overwrite, maxlength = maxlength, tmp=tmp, quiet=quiet)
+          force = force, maxlength = maxlength, tmp=tmp, quiet=quiet)
   }
 
   #Parse logs

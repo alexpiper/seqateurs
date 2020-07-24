@@ -20,7 +20,7 @@ bbtrim(
   tpe = TRUE,
   hdist = 0,
   degenerate = TRUE,
-  overwrite = TRUE,
+  force = TRUE,
   quality = FALSE,
   maxlength = NULL,
   tmp = NULL,
@@ -65,7 +65,7 @@ Trim pairs evenly. When kmer right-trimming, trim both reads to the minimum leng
 \item{degenerate}{(Optional) Default TRUE.
 Option to search for all possible primer combinations for degenerate primers}
 
-\item{overwrite}{(Optional) Default TRUE
+\item{force}{(Optional) Default TRUE
 Option to overwrite existing output files.}
 
 \item{quality}{(Optional) Default FALSE
@@ -93,6 +93,6 @@ fastqRs <- sort(list.files(path, pattern="R2_001.*", full.names = TRUE))
 bbtrim(install="bin/bbmap", fwd=fastqFs, rev=fastqRs,
 primers=c("GGDACWGGWTGAACWGTWTAYCCHCC","GTRATWGCHCCDGCTARWACWGG"),
  degenerate=TRUE, out.dir="trimmed", ktrim="left", ordered=TRUE,
-  mink=FALSE, hdist=2, maxlength=140, overwrite=TRUE)
+  mink=FALSE, hdist=2, maxlength=140, force=TRUE)
 }
 }
