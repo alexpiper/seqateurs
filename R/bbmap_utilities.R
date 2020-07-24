@@ -95,8 +95,8 @@ bbmap_install <- function(url, dest.dir = "bin", force = FALSE) {
 #'               }
 #'
 bbdemux <- function(install = NULL, fwd, rev = NULL, Fbarcodes = NULL, Rbarcodes = NULL,
-                          restrictleft = NULL, out.dir = "demux", kmer = NULL, hdist = 0, degenerate = TRUE,
-                          overwrite = TRUE, threads = NULL, mem = NULL, interleaved = FALSE) {
+                    restrictleft = NULL, out.dir = "demux", kmer = NULL, hdist = 0, degenerate = TRUE,
+                    overwrite = TRUE, threads = NULL, mem = NULL, interleaved = FALSE) {
   nsamples <- length(fwd)
   # Create temp files
   tmp <- tempdir()
@@ -414,16 +414,16 @@ bbtrim <- function(install = NULL, fwd, rev = NULL, primers, checkpairs=FALSE,
                                 cleanup_tree = TRUE)
 
       } else{
-      reformat_args <- paste(" -cp ", paste0(install, "/current jgi.ReformatReads "), in1, in2, "vpair", collapse = " ")
-      # Run Reformatreads
-      result <- processx::run(command="java",
-                              args = reformat_args,
-                              echo=quiet,
-                              echo_cmd	= quiet,
-                              spinner=TRUE,
-                              windows_verbatim_args=TRUE,
-                              error_on_status = TRUE,
-                              cleanup_tree = TRUE)
+        reformat_args <- paste(" -cp ", paste0(install, "/current jgi.ReformatReads "), in1, in2, "vpair", collapse = " ")
+        # Run Reformatreads
+        result <- processx::run(command="java",
+                                args = reformat_args,
+                                echo=quiet,
+                                echo_cmd	= quiet,
+                                spinner=TRUE,
+                                windows_verbatim_args=TRUE,
+                                error_on_status = TRUE,
+                                cleanup_tree = TRUE)
       }
       if(stringr::str_detect(result$stderr, "Names do not appear to be correctly paired.")){
         stop(message(paste0("ERROR: ", fwd, " and ", rev, " do not appear to be correctly paired")))
@@ -448,9 +448,9 @@ bbtrim <- function(install = NULL, fwd, rev = NULL, primers, checkpairs=FALSE,
 
     if (.Platform$OS.type == "unix") {
       args <- paste( in1, in2, literal, restrictleft, out, out1,
-                    out2, kmer, mink, hdist, trim.end,tbo, tpe, degenerate, quality,
-                    maxlength, overwrite, "-da",
-                    collapse = " "
+                     out2, kmer, mink, hdist, trim.end,tbo, tpe, degenerate, quality,
+                     maxlength, overwrite, "-da",
+                     collapse = " "
       )
       result <- system2(command=paste0(install, "/bbduk.sh"),
                         args = args,
@@ -459,17 +459,17 @@ bbtrim <- function(install = NULL, fwd, rev = NULL, primers, checkpairs=FALSE,
                         wait=TRUE)
     }else{
       # Run Reformatreads
-    args <- paste(" -cp ", paste0(install, "/current jgi.BBDuk "), in1, in2, literal, restrictleft, out, out1,
-                  out2, kmer, mink, hdist, trim.end,tbo, tpe, degenerate, quality,
-                  maxlength, overwrite, "-da",
-                  collapse = " "
-    )
+      args <- paste(" -cp ", paste0(install, "/current jgi.BBDuk "), in1, in2, literal, restrictleft, out, out1,
+                    out2, kmer, mink, hdist, trim.end,tbo, tpe, degenerate, quality,
+                    maxlength, overwrite, "-da",
+                    collapse = " "
+      )
 
-   result <- system2(command="java",
-                     args = args,
-                     stdout = tmpout,
-                     stderr = tmperr,
-                     wait=TRUE)
+      result <- system2(command="java",
+                        args = args,
+                        stdout = tmpout,
+                        stderr = tmperr,
+                        wait=TRUE)
     }
     now <- date()
     cat(paste0("Executed: ", now, "\n"), file = tmplogs, append=TRUE)
@@ -605,33 +605,33 @@ parse_bbtrim <- function(x) {
   lines <- readLines(x)
 
   if (any(stringr::str_detect(lines, "Sample:"))){
-  sample <- readr::read_tsv(lines[which(stringr::str_sub(lines, 1, 7) == 'Sample:' )], col_names = FALSE) %>%
-    tidyr::separate(X2, into="sample", sep="\\.", extra="drop") %>%
-    dplyr::select(sample)
+    sample <- readr::read_tsv(lines[which(stringr::str_sub(lines, 1, 7) == 'Sample:' )], col_names = FALSE) %>%
+      tidyr::separate(X2, into="sample", sep="\\.", extra="drop") %>%
+      dplyr::select(sample)
   } else (stop("Error: Sample not found in log file, try deleting temporary files"))
 
   if (any(stringr::str_detect(lines, "Input:"))){
-  input <- readr::read_tsv(lines[which(stringr::str_sub(lines, 1, 6) == 'Input:' )], col_names = FALSE) %>%
-    tidyr::separate(X2, into="input_reads", sep=" ", extra="drop") %>%
-    tidyr::separate(X4, into="input_bases", sep=" ", extra="drop") %>%
-    dplyr::select(input_reads, input_bases) %>%
-    dplyr::mutate_if(is.character, as.numeric)
+    input <- readr::read_tsv(lines[which(stringr::str_sub(lines, 1, 6) == 'Input:' )], col_names = FALSE) %>%
+      tidyr::separate(X2, into="input_reads", sep=" ", extra="drop") %>%
+      tidyr::separate(X4, into="input_bases", sep=" ", extra="drop") %>%
+      dplyr::select(input_reads, input_bases) %>%
+      dplyr::mutate_if(is.character, as.numeric)
   } else (stop("Error: Input not found in log file, try deleting temporary files"))
 
   if (any(stringr::str_detect(lines, "KTrimmed:"))){
-  ktrimmed <- readr::read_tsv(lines[which(stringr::str_sub(lines, 1, 9) == 'KTrimmed:' )], col_names = FALSE) %>%
-    tidyr::separate(X2, into="ktrimmed_reads", sep=" ", extra="drop") %>%
-    tidyr::separate(X3, into="ktrimmed_bases", sep=" ", extra="drop") %>%
-    dplyr::select(ktrimmed_reads, ktrimmed_bases) %>%
-    dplyr::mutate_if(is.character, as.numeric)
+    ktrimmed <- readr::read_tsv(lines[which(stringr::str_sub(lines, 1, 9) == 'KTrimmed:' )], col_names = FALSE) %>%
+      tidyr::separate(X2, into="ktrimmed_reads", sep=" ", extra="drop") %>%
+      tidyr::separate(X3, into="ktrimmed_bases", sep=" ", extra="drop") %>%
+      dplyr::select(ktrimmed_reads, ktrimmed_bases) %>%
+      dplyr::mutate_if(is.character, as.numeric)
   } else (stop("Error: Ktrimmed not found in log file, try deleting temporary files"))
 
   if (any(stringr::str_detect(lines, "Result:"))){
-  result <- readr::read_tsv(lines[which(stringr::str_sub(lines, 1, 7) == 'Result:' )], col_names = FALSE) %>%
-    tidyr::separate(X2, into="output_reads", sep=" ", extra="drop") %>%
-    tidyr::separate(X3, into="output_bases", sep=" ", extra="drop") %>%
-    dplyr::select(output_reads, output_bases) %>%
-    dplyr::mutate_if(is.character, as.numeric)
+    result <- readr::read_tsv(lines[which(stringr::str_sub(lines, 1, 7) == 'Result:' )], col_names = FALSE) %>%
+      tidyr::separate(X2, into="output_reads", sep=" ", extra="drop") %>%
+      tidyr::separate(X3, into="output_bases", sep=" ", extra="drop") %>%
+      dplyr::select(output_reads, output_bases) %>%
+      dplyr::mutate_if(is.character, as.numeric)
   } else (stop("Error: Result not found in log file, try deleting temporary files"))
   out <- cbind(sample, input, ktrimmed, result)
   return(out)
@@ -669,9 +669,9 @@ parse_bbdemux <- function(x) {
     dplyr::select(demulti_reads, demulti_bases) %>%
     dplyr::mutate_if(is.character, as.numeric)
 
- out <-  cbind(sample, input, matched )
+  out <-  cbind(sample, input, matched )
 
- return(out)
+  return(out)
 }
 
 
@@ -701,8 +701,8 @@ parse_bhist <- function(dir) {
     )) %>%
     dplyr::rename(Pos = `#Pos`) %>%
     dplyr::mutate(Source = Source %>%
-            stringr::str_remove(pattern = "^(.*)\\/") %>%
-            stringr::str_remove(pattern = "_bhist.txt"))
+                    stringr::str_remove(pattern = "^(.*)\\/") %>%
+                    stringr::str_remove(pattern = "_bhist.txt"))
 
   return(out)
 }
@@ -732,8 +732,8 @@ parse_qhist <- function(dir) {
     )) %>%
     dplyr::rename(Pos = `#BaseNum`) %>%
     dplyr::mutate(Source = Source %>%
-             stringr::str_remove(pattern = "^(.*)\\/") %>%
-             stringr::str_remove(pattern = "_qhist.txt"))
+                    stringr::str_remove(pattern = "^(.*)\\/") %>%
+                    stringr::str_remove(pattern = "_qhist.txt"))
 
   return(out)
 }
@@ -763,8 +763,8 @@ parse_aqhist <- function(dir) {
     ))%>%
     dplyr::rename(avg_quality = `#Quality`) %>%
     dplyr::mutate(Source = Source %>%
-             dplyr::str_remove(pattern = "^(.*)\\/")%>%
-               dplyr::str_remove(pattern = "_aqhist.txt"))
+                    dplyr::str_remove(pattern = "^(.*)\\/")%>%
+                    dplyr::str_remove(pattern = "_aqhist.txt"))
 
   return(out)
 }
@@ -823,8 +823,7 @@ parse_lhist <- function(dir) {
     )) %>%
     dplyr::rename(Length = `#Length`) %>%
     dplyr::mutate(Source = Source %>%
-             stringr::str_remove(pattern = "^(.*)\\/")%>%
-             stringr::str_remove(pattern = "_lhist.txt"))
+                    stringr::str_remove(pattern = "^(.*)\\/")%>%
+                    stringr::str_remove(pattern = "_lhist.txt"))
   return(out)
 }
-
