@@ -220,6 +220,7 @@ cluster_otus <- function(seqtab, method="complete", similarity=0.97, rename=FALS
 #'
 #' @examples
 propagate_tax <- function(tax, from = "Family") {
+  .Deprecated(new="seqateurs::na_to_unclassified", package="seqateurs", old="seqateurs::propagate_tax")
   col.prefix <- substr(colnames(tax), 1, 1) # Assumes named Kingdom, ...
 
   # Highest level to propagate from
@@ -239,6 +240,180 @@ propagate_tax <- function(tax, from = "Family") {
     tax[prop, col] <- newtax
   }
   tax
+}
+
+
+# NA_to_unclassified ------------------------------------------------------
+
+
+#' Convert NA classifications to the their highest successful classification
+#'
+#' @param x A matrix, data frame or phyloseq object
+#' @param sep The seperator between the rank, and the name
+#' i.e. G__Drosophila would be the default for an OTU that could only be assigned to the genus Drosophila
+#' @param rownames Whether rownames should be returned, or instead an OTU column
+#' @param quiet Whether progress should be printed to console
+#'
+#' @seealso unclassified_to_na
+#' @return
+#' @export
+#' @import tibble
+#' @import dplyr
+#' @import phyloseq
+#' @import stringr
+#'
+#' @examples
+na_to_unclassified <- function(x, sep="__", rownames=TRUE, quiet=FALSE){
+  if(any(class(x) == "phyloseq")){
+    tax <- phyloseq::tax_table(x) %>%
+      as("matrix")%>%
+      as.data.frame()
+    ps <- TRUE
+    ranks <- phyloseq::rank_names(x)
+    if(!quiet){ message("Input is a phyloseq object")}
+  } else if (any(class(x) %in% c("matrix", "data.frame"))){
+    tax <- as.data.frame(x)
+    ranks <- colnames(x)
+    ps <- FALSE
+  } else(stop("x must be a matrix, data frame or phyloseq object"))
+
+  replacements <- tax %>%
+    dplyr::bind_cols(lowest_classified(tax, return="both", rownames=TRUE) %>%
+                       dplyr::transmute(lowest = paste0(substr(rank, start = 1, stop = 1), sep, name))) %>%
+    tibble::rownames_to_column("OTU") %>%
+    dplyr::mutate(across(ranks, function(x){coalesce(x, lowest)})) %>%
+    dplyr::select(-lowest)
+
+  #return modified table
+  if(ps){
+    tax_table(x) <- replacements %>%
+      tibble::column_to_rownames("OTU")%>%
+      as("matrix") %>%
+      phyloseq::tax_table()
+    out <- x
+  } else if (!ps && rownames==TRUE){
+    out <- replacements %>%
+      tibble::column_to_rownames("OTU")
+  } else {
+    out <- replacements
+  }
+  return(out)
+}
+
+# Unclassified_to_na ------------------------------------------------------
+
+
+#' Convert classifications that are annotated with their highest successful classification back ot NA
+#'
+#' @param x A matrix, data frame or phyloseq object
+#' @param sep The seperator between the rank, and the name
+#' i.e. G__Drosophila would be the default for an OTU that could only be assigned to the genus Drosophila
+#' @param rownames Whether rownames should be returned, or instead an OTU column
+#' @param quiet Whether progress should be printed to console
+#'
+#' @seealso na_to_unclassified
+#' @return
+#' @export
+#'
+#' @import tibble
+#' @import dplyr
+#' @import phyloseq
+#' @import stringr
+#' @import tidyr
+#'
+#' @examples
+unclassified_to_na <- function(x, sep="__", rownames=TRUE, quiet=FALSE){
+  if(any(class(x) == "phyloseq")){
+    tax <- phyloseq::tax_table(x)%>%
+      as("matrix") %>%
+      as.data.frame()
+    ps <- TRUE
+    ranks <- phyloseq::rank_names(x)
+    if(!quiet){ message("Input is a phyloseq object")}
+  } else if (any(class(x) %in% c("matrix", "data.frame"))){
+    tax <- as.data.frame(x)
+    ranks <- colnames(x)
+    ps <- FALSE
+  } else(stop("x must be a matrix, data frame or phyloseq object"))
+  replacements <- tax %>%
+    tibble::rownames_to_column("OTU") %>%
+    tidyr::pivot_longer(cols=all_of(ranks),
+                        names_to = "rank",
+                        values_to = "name") %>%
+    dplyr::filter(!stringr::str_detect(name, "__")) %>%
+    tidyr::pivot_wider(names_from="rank",
+                       values_from= "name")
+  #return modified table
+
+  #return modified table
+  if(ps){
+    tax_table(x) <- replacements %>%
+      tibble::column_to_rownames("OTU")%>%
+      as("matrix") %>%
+      phyloseq::tax_table()
+    out <- x
+  } else if (!ps && rownames==TRUE){
+    out <- replacements %>%
+      tibble::column_to_rownames("OTU")
+  } else {
+    out <- replacements
+  }
+  return(out)
+}
+
+
+# Lowest_classified_rank --------------------------------------------------
+
+
+#' Get the lowest classified ranks for the OTUs
+#'
+#' @param x A matrix, data frame or phyloseq object
+#' @param sep The seperator between the rank, and the name
+#' i.e. G__Drosophila would be the default for an OTU that could only be assigned to the genus Drosophila
+#' @param return The type of values to return.
+#' Options include 'rank' which returns a character vector listing the lowest taxonomic each otu was classified to, i.e. Species, Genus etc
+#' 'taxon' returns a character vector listing the lowest taxonomic name each otu was classified to i.e. Drosophila_suzukii, Diptera etc
+#' 'both' returns a data frame containing both of the above
+#' @param rownames Whether rownames should be returned, or instead an OTU column
+#'
+#' @return
+#' @export
+#' @seealso na_to_unclassified unclassified_to_na
+#' @import phyloseq
+#' @import stringr
+#'
+#' @examples
+lowest_classified <- function(x, sep="__", return="rank", rownames=TRUE){
+  if(any(class(x) == "phyloseq")){
+    tax <- phyloseq::tax_table(x)%>%
+      as("matrix") %>%
+      as.data.frame()
+    ps <- TRUE
+    ranks <- phyloseq::rank_names(x)
+  } else if (any(class(x) %in% c("matrix", "data.frame"))){
+    tax <- as.data.frame(x)
+    ranks <- colnames(x)
+  } else(stop("x must be a matrix, data frame or phyloseq object"))
+  #Check that NA's are present
+  if(any(stringr::str_detect(tax, sep))){
+    tax <- unclassified_to_na(tax, sep=sep, rownames=rownames)
+  }
+  # get lowest classified
+  revtax <- rev(tax)
+  logidf <- !is.na(revtax)
+  keepvec <- unname(apply(logidf, 1, which.max))
+  if(return=="rank"){
+    lowest <- colnames(logidf)[keepvec]
+  } else if(return=="taxon"){
+    lowest <- mapply(function(x,y) revtax[x,y], x=seq_len(nrow(revtax)), y=keepvec)
+  } else if(return=="both"){
+    lowest <- data.frame(
+      OTU = ifelse(has_rownames(tax), rownames(tax), tax$OTU),
+      rank = colnames(logidf)[keepvec],
+      name = mapply(function(x,y) revtax[x,y], x=seq_len(nrow(revtax)), y=keepvec)
+    )
+  }
+  return(lowest)
 }
 
 
