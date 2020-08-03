@@ -332,18 +332,21 @@ unclassified_to_na <- function(x, sep="__", rownames=TRUE, quiet=FALSE){
     if(!quiet){ message("Input is a phyloseq object")}
   } else if (any(class(x) %in% c("matrix", "data.frame"))){
     tax <- as.data.frame(x)
-    ranks <- colnames(x)
+    if(!"OTU" %in% colnames(tax)){
+      tax <- tax %>%
+        tibble::rownames_to_column("OTU")
+    }
+
+    ranks <- colnames(x)[!colnames(x)=="OTU"]
     ps <- FALSE
   } else(stop("x must be a matrix, data frame or phyloseq object"))
   replacements <- tax %>%
-    tibble::rownames_to_column("OTU") %>%
     tidyr::pivot_longer(cols=all_of(ranks),
                         names_to = "rank",
                         values_to = "name") %>%
     dplyr::filter(!stringr::str_detect(name, "__")) %>%
     tidyr::pivot_wider(names_from="rank",
                        values_from= "name")
-  #return modified table
 
   #return modified table
   if(ps){
