@@ -41,7 +41,7 @@ gm_mean <- function(x, na.rm=TRUE){
 #' @export
 #'
 #' @examples
-clr <- function(x, base=2){
+clr <- function(x, base=exp(1), close=TRUE){
   x <- log((x / gm_mean(x)), base)
   x[!is.finite(x) | is.na(x)] <- 0.0
   return(x)
@@ -49,14 +49,15 @@ clr <- function(x, base=2){
 
 #' Inverse clr log-ratio transformation
 #'
-#' @param x a vector of CLR transfom
+#' @param x
+#' @param base
 #'
 #' @return
 #' @export
 #'
 #' @examples
-clrInv <- function(x){
-  x <- exp(x) /  sum(exp(x))
+clrInv <- function(x, base=exp(1)){
+  x <- base^x /  sum(base^x)
   return(x)
 }
 
