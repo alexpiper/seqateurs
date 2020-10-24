@@ -46,3 +46,42 @@ clr <- function(x, base=2){
   x[!is.finite(x) | is.na(x)] <- 0.0
   return(x)
 }
+
+#' Inverse clr log-ratio transformation
+#'
+#' @param x a vector of CLR transfom
+#'
+#' @return
+#' @export
+#'
+#' @examples
+clrInv <- function(x){
+  x <- exp(x) /  sum(exp(x))
+  return(x)
+}
+
+#' Logit transformation
+#'
+#' @param x
+#'
+#' @return
+#' @export
+#'
+#' @examples
+logit <- function(x){
+  log(x) - log(1 - x)
+}
+
+#' Inverse logitt transofmration
+#'
+#' @param x
+#'
+#' @return
+#' @export
+#'
+#' @examples
+expit <- function(x){
+  exp(x) / (1+exp(x))
+}
+
+
