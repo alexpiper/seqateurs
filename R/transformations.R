@@ -31,7 +31,6 @@ gm_mean <- function(x, na.rm=TRUE){
   exp(sum(log(x[x > 0 & !is.na(x)]), na.rm=na.rm) / length(x))
 }
 
-
 #' Centred log-ratio transformation
 #'
 #' @param x
@@ -84,5 +83,3 @@ logit <- function(x){
 expit <- function(x){
   exp(x) / (1+exp(x))
 }
-
-

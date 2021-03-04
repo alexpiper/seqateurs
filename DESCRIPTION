@@ -19,7 +19,7 @@ Imports:
     ShortRead,
     XML,
     data.table,
-    dplyr,
+    dplyr (>= 1.0.0),
     ggplot2,
     httr,
     magrittr,
