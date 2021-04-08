@@ -833,7 +833,6 @@ parse_lhist <- function(dir) {
 
 
 # bbdemux2 ----------------------------------------------------------------
-# Demultiplex by primers --------------------------------------------------
 
 #' Demultiplex fusion primers using BBmap Seal
 #'
@@ -950,23 +949,43 @@ bbdemux2 <- function(install = NULL, fwd, rev = NULL, Fbarcodes = NULL, Rbarcode
     (mem <- "")
   }
 
-  # Parse arguments to seal
-  args <- paste(" -cp ", paste0(install, "/current jgi.Seal"), mem, in1, in2, ref,
-                restrictleft, pattern, kmer, hdist,
-                degenerate, force, threads, "kpt=t",
-                collapse = " ")
+  if (.Platform$OS.type == "unix") {
+    # Parse args to seal
+    args <- paste(in1, in2, ref,
+                  restrictleft, pattern, kmer, hdist,
+                  degenerate, force, threads, "kpt=t",
+                  collapse = " ")
 
-  # Run bbmap seal
-  if(!quiet) {message(paste0("Demultiplexing ",length(Fbarcodes)," tagged primers for: ", fwd, " and ", rev))}
-  result <- processx::run(command="java",
-                          args = args,
-                          echo=quiet,
-                          echo_cmd	= quiet,
-                          spinner=TRUE,
-                          stderr_to_stdout = FALSE,
-                          windows_verbatim_args=TRUE,
-                          error_on_status = TRUE,
-                          cleanup_tree = TRUE)
+    # Run bbduk using shell script
+    result <- processx::run(command=paste0(install, "/seal.sh"),
+                            args = args,
+                            echo=quiet,
+                            echo_cmd	= quiet,
+                            spinner=TRUE,
+                            stderr_to_stdout = FALSE,
+                            windows_verbatim_args=TRUE,
+                            error_on_status = TRUE,
+                            cleanup_tree = TRUE)
+
+  } else{
+    # Parse arguments to seal
+    args <- paste(" -cp ", paste0(install, "/current jgi.Seal"), mem, in1, in2, ref,
+                  restrictleft, pattern, kmer, hdist,
+                  degenerate, force, threads, "kpt=t",
+                  collapse = " ")
+
+    # Run bbmap seal using java
+    if(!quiet) {message(paste0("Demultiplexing ",length(Fbarcodes)," tagged primers for: ", fwd, " and ", rev))}
+    result <- processx::run(command="java",
+                            args = args,
+                            echo=quiet,
+                            echo_cmd	= quiet,
+                            spinner=TRUE,
+                            stderr_to_stdout = FALSE,
+                            windows_verbatim_args=TRUE,
+                            error_on_status = TRUE,
+                            cleanup_tree = TRUE)
+  }
 
   # Parse stderr which contains read stats
   lines <- read_lines(result$stderr)
@@ -1232,8 +1251,6 @@ bbtrim2 <- function(install = NULL, fwd, rev = NULL, primers, checkpairs = FALSE
 
 
 # bbsplit2 -----------------------------------------------------------------
-
-# Split interleaved reads -------------------------------------------------
 
 #' Split interleaved reads
 #'
