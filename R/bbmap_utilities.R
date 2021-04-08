@@ -216,9 +216,6 @@ bbdemux <- function(install = NULL, fwd, rev = NULL, Fbarcodes = NULL, Rbarcodes
 
 # Trim primers ------------------------------------------------------------
 
-# Note - may be worth adding an automated Maxlength to remove any untrimmed reads - maxlength = Readlength - shorterst primer + 1
-# Note - Write out stats and output to a file within the output directory
-
 #' Trim primers using BBDuk
 #'
 #' @param install (Required) Install location for bbmap
@@ -833,3 +830,464 @@ parse_lhist <- function(dir) {
                     stringr::str_remove(pattern = "_lhist.txt"))
   return(out)
 }
+
+
+# bbdemux2 ----------------------------------------------------------------
+# Demultiplex by primers --------------------------------------------------
+
+#' Demultiplex fusion primers using BBmap Seal
+#'
+#' @param install (Required) Install location for bbmap
+#' @param fwd (Required) Vector of locations of forward reads
+#' @param rev (Optional) Vector of locations of reverse reads
+#' @param Fbarcodes (Required) Barcodes used in forward reads
+#' @param Rbarcodes (Optional) Barcodes used in reverse reads
+#' @param restrictleft (Optional) Defaults to the size of the largest primer.
+#' Restricts the kmer search for primer sequences to just the left side of the molecule.
+#' @param out.dir (Optional) Default "demux"
+#'  The path to write the output reads.
+#' @param kmer (Optional) default the size of the smallest primer will be used.
+#' The kmer size to use for primer searching.
+#' @param hdist (Optional) Default = 0. The hamming distance (number of substitution errors) allowed for mismatch to the query primer.
+#' @param degenerate (Optional) Default TRUE.
+#' Option to search for all possible primer combinations for degenerate primers
+#' @param force (Optional) Default TRUE
+#' Option to overwrite existing output files.
+#' @param interleaved (Optional) Default FALSE
+#' Option to input interleaved reads
+#' @param threads (Optional) Default autodetect
+#' Number of CPU threads to use
+#' WARNING: Thread detection can fail on cluster computing currently
+#' @param mem (Optional) Default autodetect
+#' GB of memory to use
+#' WARNING: mem detection can fail on cluster computing currently
+#'
+#' @return
+#' @export
+#'
+#' @import dplyr
+#' @import tibble
+#' @import stringr
+#'
+bbdemux2 <- function(install = NULL, fwd, rev = NULL, Fbarcodes = NULL, Rbarcodes = NULL, names=NULL,
+                     restrictleft = NULL, out.dir = "demux", kmer = NULL, hdist = 0, degenerate = TRUE,
+                     force = TRUE, mem = NULL, threads = NULL, quiet=FALSE) {
+
+  in1 <- paste0("in=", fwd)
+  if (!is.null(rev)) {
+    in2 <- paste0("in2=", rev)
+  } else {
+    (in2 <- "")
+  }
+
+  # Check if number of F and R primers match
+  if(!is.null(names)) {
+    if (!all.equal(length(names), length(Fbarcodes))) {
+      stop("names must be the same length as Fbarcodes or NULL")
+    }
+  }
+
+  if (!is.null(Fbarcodes) & is.null(Rbarcodes)) {
+    if(!is.null(names)){
+      writeLines(paste0(">",names, "\n", Fbarcodes, "\n"), con = "Fprimers.fa")
+    } else {
+      writeLines(paste0(">Rep", seq(1:length(Fbarcodes)), "\n", Fbarcodes, "\n"), con = "Fprimers.fa")
+    }
+    ref <- "ref=Fprimers.fa"
+  } else if (!is.null(Fbarcodes) & !is.null(Rbarcodes)) {
+    if(!is.null(names)){
+      writeLines(paste0(">",names, "\n", Fbarcodes, "\n"), con = "Fprimers.fa")
+      writeLines(paste0(">",names, "\n", Rbarcodes, "\n"), con = "Rprimers.fa")
+    }else {
+      writeLines(paste0(">Rep", seq(1:length(Fbarcodes)), "\n", Fbarcodes, "\n"), con = "Fprimers.fa", sep = "")
+      writeLines(paste0(">Rep", seq(1:length(Rbarcodes)), "\n", Rbarcodes, "\n"), con = "Rprimers.fa", sep = "")
+    }
+    ref <- "ref=Fprimers.fa,Rprimers.fa"
+  }
+
+  pattern <- paste0("pattern=", out.dir, "/", basename(fwd) %>%
+                      stringr::str_split_fixed("\\.", n = 2) %>%
+                      tibble::as_tibble() %>%
+                      dplyr::pull(V1) %>%
+                      stringr::str_replace(pattern = "_R1_", replacement = "_R1R2_"), "_%.fastq.gz")
+
+  if (is.numeric(kmer)) {
+    kmer <- paste0("k=", kmer)
+  } else {
+    kmer <- paste0("k=", sort(nchar(c(Fbarcodes, Rbarcodes)), decreasing = FALSE)[1])
+  }
+
+  if (is.numeric(restrictleft)) {
+    restrictleft <- paste0("restrictleft=", restrictleft)
+  } else {
+    restrictleft <- paste0("restrictleft=", sort(nchar(c(Fbarcodes, Rbarcodes)), decreasing = TRUE)[1])
+  }
+
+  if (is.numeric(hdist)) {
+    hdist <- paste0("hdist=", hdist)
+  }
+  if (degenerate == TRUE) {
+    degenerate <- "copyundefined"
+  } else {
+    (degenerate <- "")
+  }
+
+  if (force == TRUE) {
+    force <- "overwrite=TRUE"
+  } else {
+    (force <- "")
+  }
+
+  if (!is.null(threads)) {
+    threads <- paste0("threads=", threads)
+  } else {
+    (threads <- "threads=auto")
+  }
+
+  if (!is.null(mem)) {
+    mem <- paste0("-Xmx", mem, "g")
+  } else {
+    (mem <- "")
+  }
+
+  # Parse arguments to seal
+  args <- paste(" -cp ", paste0(install, "/current jgi.Seal"), mem, in1, in2, ref,
+                restrictleft, pattern, kmer, hdist,
+                degenerate, force, threads, "kpt=t",
+                collapse = " ")
+
+  # Run bbmap seal
+  if(!quiet) {message(paste0("Demultiplexing ",length(Fbarcodes)," tagged primers for: ", fwd, " and ", rev))}
+  result <- processx::run(command="java",
+                          args = args,
+                          echo=quiet,
+                          echo_cmd	= quiet,
+                          spinner=TRUE,
+                          stderr_to_stdout = FALSE,
+                          windows_verbatim_args=TRUE,
+                          error_on_status = TRUE,
+                          cleanup_tree = TRUE)
+
+  # Parse stderr which contains read stats
+  lines <- read_lines(result$stderr)
+  sample <- read.table(text = lines[1], sep=",") %>%
+    mutate(sample = basename(V2) %>%
+             stringr::str_remove("_S.*$")) %>%
+    dplyr::select(sample)
+
+  input <- read.table(text = lines[which(str_sub(lines, 1, 6) == 'Input:' )]) %>%
+    dplyr::select(input_reads = V2, input_bases=V4)%>%
+    dplyr::mutate_if(is.character, as.numeric)
+
+  matched <- read.table(text = lines[which(str_sub(lines, 1, 14) == 'Matched reads:' )])  %>%
+    dplyr::select(demulti_reads = V3, demulti_bases=V6)%>%
+    dplyr::mutate_if(is.character, as.numeric)
+  #clean up temporary files
+  file.remove("Fprimers.fa")
+  file.remove("Rprimers.fa")
+  return(cbind(sample, input, matched ))
+}
+
+
+# bbtrim2 ------------------------------------------------------------------
+
+#' Trim primers using BBDuk
+#'
+#' @param install (Required) Install location for bbmap
+#' @param fwd (Required) Vector of locations of forward reads
+#' @param rev (Optional) Vector of locations of reverse reads
+#' @param primers (Required) Forward and reverse primers to trim
+#' @param restrictleft (Optional) Defaults to the size of the largest primer.
+#' Restricts the kmer search for primer sequences to just the left side of the molecule.
+#' @param checkpairs (Optional) Whether paired end checking should be conducted
+#' @param out.dir (Optional) Default "trimmed"
+#'  The path to write the output reads.
+#' @param trim.end (Optional) Default is "left"
+#' End of the molecule to trim primers from. "left" will trim primers from the 3' end of both forward and reverse reads.
+#' Change to "right" only if the amplicon was too short and the sequencer has read into the other end of the molecule.
+#' @param ordered (Optional) Default TRUE
+#'  Set to TRUE to output reads in same order as input.
+#' @param kmer (Optional) default the size of the smallest primer will be used.
+#' The kmer size to use for primer searching.
+#' @param mink (optional) Default FALSE
+#' Look for shorter kmers at read tips down to this length
+#' @param hdist (Optional) Default 0. The hamming distance (number of substitution errors) allowed for mismatch to the query primer.
+#' @param tpe (Otional) Default TRUE
+#' Trim pairs evenly. When kmer right-trimming, trim both reads to the minimum length of either.
+#' @param degenerate (Optional) Default TRUE.
+#' Option to search for all possible primer combinations for degenerate primers
+#' @param force (Optional) Default TRUE
+#' Option to overwrite existing output files.
+#' @param maxlength (Optional) Default FALSE
+#' Remove all reads above a maximum length. Useful for removing reads where no primers were found.
+#'
+#' @return
+#' @export
+#'
+#' @import dplyr
+#' @import tidyr
+#' @import readr
+#' @import purrr
+#' @import stringr
+#' @import processx
+#'
+bbtrim2 <- function(install = NULL, fwd, rev = NULL, primers, checkpairs = FALSE,
+                    restrictleft = NULL, out.dir = NULL, trim.end = "left", ordered = TRUE,
+                    kmer = NULL, mink = FALSE, tbo= TRUE, tpe = TRUE, hdist = 0, degenerate = TRUE,
+                    force = TRUE, maxlength = NULL, quiet=FALSE) {
+
+  if(!quiet & !is.null(rev)) {message(paste0("Trimming primers for: ", fwd, " and ", rev))
+  } else if(!quiet & is.null(rev)) {message(paste0("Trimming primers for: ", fwd))}
+
+  # Make out dir relative to current directory
+  if(is.null(out.dir)){
+    out.dir <- "bbduk"
+  }
+  if(!dir.exists(out.dir)){dir.create(out.dir)}
+
+  in1 <- paste0("in=", fwd)
+  if (!is.null(rev)) {
+    in2 <- paste0("in2=", rev)
+  } else {
+    (in2 <- "")
+  }
+
+  if (!is.null(primers)) {
+    literal <- paste0("literal=", paste0(primers, collapse = ","))
+  } else {
+    (stop("Primer sequences are required for trimming"))
+  }
+
+  if (is.null(rev)) {
+    out <- paste0( "out=", out.dir, "/", basename(fwd)) %>%
+      stringr::str_replace(pattern = ".fastq", replacement = ".trimmed.fastq")
+    out1 <- ""
+    out2 <- ""
+  } else if (!is.null(rev)) {
+    out <- ""
+    out1 <- paste0("out1=", out.dir, "/", basename(fwd)) %>%
+      stringr::str_replace(pattern = ".fastq", replacement = ".trimmed.fastq")
+    out2 <- paste0("out2=", out.dir, "/", basename(rev)) %>%
+      stringr::str_replace(pattern = ".fastq", replacement = ".trimmed.fastq")
+  }
+
+
+  if (trim.end == "left") {
+    trim.end <- paste0("ktrim=l")
+  } else if (trim.end == "right") {
+    trim.end <- paste0("ktrim=r")
+  }
+
+  if (is.numeric(kmer)) {
+    kmer <- paste0("k=", kmer)
+  } else {
+    (kmer <- paste0("k=", sort(nchar(primers), decreasing = FALSE)[1]))
+  }
+
+  if (is.numeric(maxlength)) {
+    maxlength <- paste0("maxlength=", maxlength)
+  } else {
+    maxlength <- ""
+  }
+
+  if (is.numeric(mink)) {
+    mink <- paste0("mink=", mink) # Note - mink makes it noticibly slower
+  } else if (mink == TRUE) {
+    mink <- paste0("mink=", (sort(nchar(primers), decreasing = FALSE)[1] / 2))
+  } else if (mink == FALSE) {
+    mink <- ""
+  }
+
+  if (is.numeric(restrictleft)) {
+    restrictleft <- paste0("restrictleft=", restrictleft)
+  } else {
+    restrictleft <- paste0("restrictleft=", sort(nchar(primers), decreasing = TRUE)[1])
+  }
+
+  if (ordered == TRUE) {
+    ordered <- "ordered=T"
+  } else {
+    (ordered <- "")
+  }
+
+  if (is.numeric(hdist)) {
+    hdist <- paste0("hdist=", hdist)
+  }
+
+  if (degenerate == TRUE) {
+    degenerate <- "copyundefined"
+  } else {
+    (degenerate <- "")
+  }
+
+  if (force == TRUE) {
+    force <- "overwrite=TRUE"
+  } else {
+    (force <- "")
+  }
+
+  if (tpe == TRUE) {
+    tpe <- "tpe"
+  } else {
+    (tpe <- "")
+  }
+
+  if (tbo == TRUE) {
+    tbo <- "tbo"
+  } else {
+    (tbo <- "")
+  }
+
+  # Check pairing
+  if(checkpairs == TRUE){
+
+    if (.Platform$OS.type == "unix") {
+      reformat_args <- paste(in1, in2, "vpair", collapse = " ")
+      # Run Reformatreads
+      result <- processx::run(command=paste0(install, "/reformat.sh"),
+                              args = reformat_args,
+                              echo=quiet,
+                              echo_cmd	= quiet,
+                              spinner=TRUE,
+                              windows_verbatim_args=TRUE,
+                              error_on_status = TRUE,
+                              cleanup_tree = TRUE)
+
+    } else{
+      reformat_args <- paste(" -cp ", paste0(install, "/current jgi.ReformatReads "), in1, in2, "vpair", collapse = " ")
+      # Run Reformatreads
+      result <- processx::run(command="java",
+                              args = reformat_args,
+                              echo=quiet,
+                              echo_cmd	= quiet,
+                              spinner=TRUE,
+                              windows_verbatim_args=TRUE,
+                              error_on_status = TRUE,
+                              cleanup_tree = TRUE)
+    }
+    if(stringr::str_detect(result$stderr, "Names do not appear to be correctly paired.")){
+      stop(message(paste0("ERROR: ", fwd, " and ", rev, " do not appear to be correctly paired")))
+    } else ( message("Reads are correctly paired"))
+  }
+
+  if (.Platform$OS.type == "unix") {
+    # Parse args to bbduk
+    args <- paste( in1, in2, literal, restrictleft, out, out1,
+                   out2, kmer, mink, hdist, trim.end,tbo, tpe, degenerate,
+                   maxlength, force, "-da",
+                   collapse = " "
+    )
+    # Run bbduk using shell script
+    result <- processx::run(command=paste0(install, "/bbduk.sh"),
+                            args = args,
+                            echo=quiet,
+                            echo_cmd	= quiet,
+                            spinner=TRUE,
+                            stderr_to_stdout = FALSE,
+                            windows_verbatim_args=TRUE,
+                            error_on_status = TRUE,
+                            cleanup_tree = TRUE)
+
+  } else{
+    # Parse args to bbduk
+    args <- paste(" -cp ", paste0(install, "/current jgi.BBDuk "), in1, in2, literal, restrictleft, out, out1,
+                  out2, kmer, mink, hdist, trim.end,tbo, tpe, degenerate,
+                  maxlength, force, "-da",
+                  collapse = " "
+    )
+    # Run bbduk using java
+    result <- processx::run(command="java",
+                            args = args,
+                            echo=quiet,
+                            echo_cmd	= quiet,
+                            spinner=TRUE,
+                            stderr_to_stdout = FALSE,
+                            windows_verbatim_args=TRUE,
+                            error_on_status = TRUE,
+                            cleanup_tree = TRUE)
+  }
+  # parse stderr containing results
+  lines <- read_lines(result$stderr)
+  sample <- read.table(text = lines[1], sep=",") %>%
+    mutate(sample = V1 %>%
+             stringr::str_remove("^.*in=") %>%
+             basename() %>%
+             stringr::str_remove("_S.*$")) %>%
+    dplyr::select(sample)
+
+  input <- read.table(text = lines[which(str_sub(lines, 1, 6) == 'Input:' )]) %>%
+    dplyr::select(input_reads = V2, input_bases=V4)%>%
+    dplyr::mutate_if(is.character, as.numeric)
+
+  ktrimmed <- read.table(text = lines[which(stringr::str_sub(lines, 1, 9) == 'KTrimmed:' )]) %>%
+    dplyr::select(ktrimmed_reads = V2, ktrimmed_bases=V5)%>%
+    dplyr::mutate_if(is.character, as.numeric)
+
+  output <- read.table(text = lines[which(stringr::str_sub(lines, 1, 7) == 'Result:' )]) %>%
+    dplyr::select(output_reads = V2, output_bases=V5)%>%
+    dplyr::mutate_if(is.character, as.numeric)
+  return(cbind(sample, input, ktrimmed, output))
+
+}
+
+
+# bbsplit2 -----------------------------------------------------------------
+
+# Split interleaved reads -------------------------------------------------
+
+#' Split interleaved reads
+#'
+#' @param install (Required) Install location for bbmap
+#' @param files (Required) Vector of locations of interleaved read files to split
+#' @param force (Optional) Default TRUE Option to overwrite existing output files.
+#'
+#' @return
+#' @export
+#' @import stringr
+#'
+bbsplit2 <- function(install = NULL, file, force = FALSE, quiet=FALSE) {
+  # Split interleaved reads
+  out1 <- paste0("out1=", file %>% str_replace(pattern = "_R1R2_", replacement = "_R1_"))
+  out2 <- paste0("out2=", file %>% str_replace(pattern = "_R1R2_", replacement = "_R2_"))
+  if(!quiet) {message(paste0("De-interleaving reads for: ", file))}
+  if (force == TRUE) {
+    force <- "overwrite=TRUE"
+  } else {
+    (force <- "")
+  }
+
+  if (.Platform$OS.type == "unix") {
+
+    reformat_args <- paste(file, out1, out2, force, collapse = " ")
+
+    # Run Reformatreads using shell script
+    processx::run(command=paste0(install, "/reformat.sh"),
+                  args = reformat_args,
+                  echo=quiet,
+                  echo_cmd	= quiet,
+                  spinner=TRUE,
+                  stderr_to_stdout = FALSE,
+                  windows_verbatim_args=TRUE,
+                  error_on_status = TRUE,
+                  cleanup_tree = TRUE)
+  } else{
+
+    reformat_args <- paste(" -cp ", paste0(install, "/current jgi.ReformatReads "),
+                           file, out1, out2, force, collapse = " ")
+    # Run Reformatreads using java
+    processx::run(command="java",
+                  args = reformat_args,
+                  echo=quiet,
+                  echo_cmd	= quiet,
+                  spinner=TRUE,
+                  stderr_to_stdout = FALSE,
+                  windows_verbatim_args=TRUE,
+                  error_on_status = TRUE,
+                  cleanup_tree = TRUE)
+
+  }
+}
+
+
+
+
