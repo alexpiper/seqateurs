@@ -2,8 +2,10 @@
 #'
 #' @param url (Optional) Default will search for the latest version
 #' URL to retrieve fastQC from.
-#' @param dest.dir (Optional)  Default "bin"
+#' @param dest_dir (Optional)  Default "bin"
 #' Directory to install fastQC within.
+#' @param dest_dir Directory to install fastQC within. Default "bin"
+#' @param dest.dir Deprecated
 #' @force Whether existing installs should be forcefully overwritten
 #'
 #' @return
@@ -14,7 +16,13 @@
 #' @import utils
 #'
 #' @examples
-fastqc_install <- function(url, dest.dir = "bin", force = FALSE) {
+fastqc_install <- function(url, dest_dir = "bin", dest.dir = "bin", force = FALSE) {
+
+  if (!missing("dest.dir")){
+    warning("Argument dest.dir is deprecated, use dest_dir instead")
+    dest_dir <- dest.dir
+  }
+
   if (missing(url)) {
     # find the latest version of fastq
     download_page <- xml2::read_html("http://www.bioinformatics.babraham.ac.uk/projects/download.html")
@@ -28,27 +36,27 @@ fastqc_install <- function(url, dest.dir = "bin", force = FALSE) {
                   fastqc_href)
   }
 
-  if (!dir.exists(dest.dir)) {
-    dir.create(dest.dir) # Create first directory
+  if (!dir.exists(dest_dir)) {
+    dir.create(dest_dir) # Create first directory
   }
 
   # Check if dir exists
-  if (dir.exists(paste0(dest.dir, "/fastQC")) && force == FALSE) {
+  if (dir.exists(paste0(dest_dir, "/fastQC")) && force == FALSE) {
     message("Skipped as FASTQC already exists in directory, to overwrite set force to TRUE")
     return(NULL)
-  } else  if (dir.exists(paste0(dest.dir, "/fastQC")) && force == TRUE) {
-    unlink(paste0(dest.dir, "/fastQC"), recursive = TRUE) # Remove old version
+  } else  if (dir.exists(paste0(dest_dir, "/fastQC")) && force == TRUE) {
+    unlink(paste0(dest_dir, "/fastQC"), recursive = TRUE) # Remove old version
   }
 
 
-  destfile <- file.path(dest.dir, basename(url))
+  destfile <- file.path(dest_dir, basename(url))
   if (exists(destfile)) {
     file.remove(destfile) # Remove old zip file
   }
   httr::GET(url, httr::write_disk(destfile, overwrite=TRUE))
 
   #unzip file
-  utils::unzip(destfile, exdir = dest.dir)
+  utils::unzip(destfile, exdir = dest_dir)
   #Remove download
   file.remove(destfile)
 }

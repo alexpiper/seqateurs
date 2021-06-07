@@ -4,14 +4,15 @@
 \alias{fastqc_install}
 \title{fastqc_install}
 \usage{
-fastqc_install(url, dest.dir = "bin", force = FALSE)
+fastqc_install(url, dest_dir = "bin", dest.dir = "bin", force = FALSE)
 }
 \arguments{
 \item{url}{(Optional) Default will search for the latest version
 URL to retrieve fastQC from.}
 
-\item{dest.dir}{(Optional)  Default "bin"
-Directory to install fastQC within.}
+\item{dest_dir}{Directory to install fastQC within. Default "bin"}
+
+\item{dest.dir}{Deprecated}
 }
 \value{
 

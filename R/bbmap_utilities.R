@@ -2,8 +2,9 @@
 #'
 #' @param url (Optional) Default will search for the latest version
 #' URL to retrieve bbmap from.
-#' @param dest.dir (Optional)  Default "bin"
+#' @param dest_dir (Optional)  Default "bin"
 #' Directory to install bbmap within.
+#' @param dest.dir DEPRECATED
 #' @force Whether existing installs should be forcefully overwritten
 #'
 #'
@@ -13,32 +14,37 @@
 #' @import httr
 #' @import utils
 #' @examples
-bbmap_install <- function(url, dest.dir = "bin", force = FALSE) {
-  if (missing(url)) {
+bbmap_install <- function(url, dest_dir="bin", dest.dir = "bin", force = FALSE) {
 
+  if (!missing("dest.dir")){
+    warning("Argument dest.dir is deprecated, use dest_dir instead")
+    dest_dir <- dest.dir
+  }
+
+  if (missing(url)) {
     url <- ("https://sourceforge.net/projects/bbmap/files/latest/download")
   }
 
-  if (!dir.exists(dest.dir)) {
-    dir.create(dest.dir) # Create first directory
+  if (!dir.exists(dest_dir)) {
+    dir.create(dest_dir) # Create first directory
   }
 
 
-  if (dir.exists(paste0(dest.dir, "/bbmap")) && force == FALSE) {
+  if (dir.exists(paste0(dest_dir, "/bbmap")) && force == FALSE) {
     message("Skipped as bbmap already exists in directory, to overwrite set force to TRUE")
     return(NULL)
-  } else  if (dir.exists(paste0(dest.dir, "/bbmap")) && force == TRUE) {
-    unlink(paste0(dest.dir, "/bbmap"), recursive = TRUE) # Remove old version
+  } else  if (dir.exists(paste0(dest_dir, "/bbmap")) && force == TRUE) {
+    unlink(paste0(dest_dir, "/bbmap"), recursive = TRUE) # Remove old version
   }
 
-  destfile <- paste0(file.path(dest.dir, basename(url)),".tar.gz")
+  destfile <- paste0(file.path(dest_dir, basename(url)),".tar.gz")
   if (file.exists(destfile)) {
     file.remove(destfile) # Remove old zip file
   }
   #Download file
   httr::GET(url, httr::write_disk(destfile, overwrite=TRUE))
   #Unzip
-  utils::untar(destfile, exdir = dest.dir)
+  utils::untar(destfile, exdir = dest_dir)
   #Remove download
   file.remove(destfile)
 }

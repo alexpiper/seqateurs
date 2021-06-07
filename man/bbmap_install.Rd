@@ -4,14 +4,16 @@
 \alias{bbmap_install}
 \title{Install BBtools}
 \usage{
-bbmap_install(url, dest.dir = "bin", force = FALSE)
+bbmap_install(url, dest_dir = "bin", dest.dir = "bin", force = FALSE)
 }
 \arguments{
 \item{url}{(Optional) Default will search for the latest version
 URL to retrieve bbmap from.}
 
-\item{dest.dir}{(Optional)  Default "bin"
+\item{dest_dir}{(Optional)  Default "bin"
 Directory to install bbmap within.}
+
+\item{dest.dir}{DEPRECATED}
 }
 \value{
 
