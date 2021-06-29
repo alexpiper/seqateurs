@@ -324,6 +324,7 @@ align_overlap <- function(query, ref) {
 #' @return
 #' @export
 #' @import ShortRead
+#' @import Biostrings
 #'
 #' @examples
 n_overlap <- function(fwd, rev, sample = 100) {
@@ -337,14 +338,16 @@ n_overlap <- function(fwd, rev, sample = 100) {
   on.exit(close(fR), add=TRUE)
   set.seed(123L);fqR <- ShortRead::yield(fR)
 
-  #Nfilter
-  keep <- ShortRead::nFilter()(fqF) & ShortRead::nFilter()(fqR)
+  #Get reads where both contain no N's
+  keep <- (Biostrings::alphabetFrequency(sread(fqF), baseOnly=TRUE)[,"other"] <= 0
+           ) & (Biostrings::alphabetFrequency(sread(fqR), baseOnly=TRUE)[,"other"] <= 0)
+
   fqF <- fqF[keep]
   fqR <- fqR[keep]
 
   #Check ids match
-  idF <- trimTails(ShortRead::id(fqF), 1, " ")
-  idR <- trimTails(ShortRead::id(fqR), 1, " ")
+  idF <- ShortRead::trimTails(ShortRead::id(fqF), 1, " ")
+  idR <- ShortRead::trimTails(ShortRead::id(fqR), 1, " ")
 
   if(!all(idF == idR)){stop("Error: paired end reads dont match")}
 
