@@ -27,7 +27,7 @@
 #' @examples
 #' save_fasta(ps)
 #' save_fasta(ps = ps, file = "sequences.fasta", rank = "Genus")
-ps_to_fasta <- function(ps = ps, out.file = NULL, seqnames = "unique", width = 1000, ...){
+ps_to_fasta <- function(ps, out.file = NULL, seqnames = "unique", width = 1000, ...){
   if (is.null(ps)){
     message("Phyloseq object not found.")
   }
@@ -58,6 +58,56 @@ ps_to_fasta <- function(ps = ps, out.file = NULL, seqnames = "unique", width = 1
   Biostrings::writeXStringSet(seqs, filepath = out.file, width=width, ... = ...)
   message(paste0(phyloseq::ntaxa(ps), " sequences written to <", out.file, ">."))
 }
+
+
+#' ps_to_dnabin
+#'
+#'
+#' @param ps A \code{phyloseq} object that contains \code{\link[phyloseq]{refseq}}.
+#' If there the \code{refseq} slot is not filled, this function will try pull the
+#' sequences from \code{\link[phyloseq]{get_taxa}}
+#'
+#'
+#' @param seqnames (optional) A taxonomic rank from the \code{\link[phyloseq]{tax_table}} which will be used to name the sequences.
+#' alternatively "unique" will uniquely name the sequences as \code{ASV_#},
+#' "sequence" will name the sequences in the fasta exactly the same same as the sequence, usfull for LULU curation.
+#'
+#' @export
+#' @import phyloseq
+#' @import Biostrings
+#' @importFrom ape as.DNAbin
+#' @importFrom stringr str_to_sentence
+#'
+#' @examples
+#' save_fasta(ps)
+#' save_fasta(ps = ps, file = "sequences.fasta", rank = "Genus")
+ps_to_dnabin <- function (ps, seqnames = "unique") {
+  if (is.null(ps)) {
+    message("Phyloseq object not found.")
+  }
+  if (!is.null(phyloseq::refseq(ps, errorIfNULL = FALSE))) {
+    seqs <- ape::as.DNAbin(Biostrings::DNAStringSet(as.vector(phyloseq::refseq(ps))))
+  } else {
+    message("refseq() not found. Using tax_table rownames for sequences.")
+    if (sum(grepl("[^ACTG]", rownames(phyloseq::tax_table(ps)))) >
+        0) {
+      stop("Error: Taxa do not appear to be DNA sequences.")
+    }
+    seqs <- ape::as.DNAbin(Biostrings::DNAStringSet(colnames(phyloseq::get_taxa(ps))))
+  }
+
+  seqnames <- stringr::str_to_sentence(seqnames)
+  if (seqnames %in% phyloseq::rank_names(ps)) {
+    names(seqs) <- make.unique(unname(phyloseq::tax_table(ps)[, seqnames]), sep = "_")
+  } else if (seqnames == "unique" || is.null(seqnames)) {
+    message("Rank not found. Naming sequences sequentially (i.e. ASV_#).")
+    names(seqs) <- paste0("ASV_", 1:phyloseq::ntaxa(ps))
+  } else if (seqnames == "sequence") {
+    names(seqs) <- as.character(seqs)
+  }
+  return(seqs)
+}
+
 
 # Fast melt ---------------------------------------------------------------
 #' Fast melt
@@ -159,55 +209,64 @@ summarise_taxa <-  function(physeq, rank, group_by = NULL){
 
 #' OTU clustering of DADA2 seqtab
 #'
-#' Thanks to Michael mclaren and Erik Wright for code
-#' @param seqtab A DADA2 generated ASV table with columns as sequences and rows as samples
+#' @param x The input object can be a DADA2 generated ASV table with columns as sequences and rows as samples,
+#' a phyloseq object with or without refseqs, or a DNAbin or DNAStringSet.
 #' @param method An agglomeration method to parse to DECIPHER::IdClusters.
 #' This should be (an abbreviation of) one of "complete", "single", "UPGMA", "WPGMA", "NJ", "ML", or "inexact".
 #' (See help page on DECIPHER::IdClusters for more information.)
-#' @param similarity A similarity to cluster at
-#' @param rename Whether clusters should be renamed to OTU<cluster #>
+#' @param similarity A similarity threshold to cluster at. Must be a number between 0 and 1
 #' @param cores The number of processsor cores to use
 #'
 #' @return
 #' @export
 #' @import Biostrings
 #' @import DECIPHER
-#' @import tibble
+#' @import dplyr
 #'
 #' @examples
-cluster_otus <- function(seqtab, method="complete", similarity=0.97, rename=FALSE, cores=1) {
+cluster_otus <- function(x, method="complete", similarity=0.97, cores=1) {
 
-  asv_sequences <- colnames(seqtab)
-  sample_names <- rownames(seqtab)
-  dna <- Biostrings::DNAStringSet(asv_sequences)
+  if(is(x, "matrix")| is(x, "data.frame")){
+    asv_sequences <- colnames(seqtab)
+  } else if(is(x, "phyloseq") & !is.null(phyloseq::refseq(x, errorIfNULL = FALSE))){
+    asv_sequences <- as.vector(phyloseq::refseq(x))
+  } else if(is(x, "phyloseq") & is.null(phyloseq::refseq(x, errorIfNULL = FALSE))){
+    message("refseq() not found. Using tax_table rownames for sequences.")
+    if (sum(grepl("[^ACTG]", rownames(phyloseq::tax_table(x)))) > 0) {
+      stop("Error: Taxa do not appear to be DNA sequences.")
+    }
+    asv_sequences <- colnames(phyloseq::get_taxa(x))
+  } else if(is(x, "DNAStringSet") ){
+    asv_sequences <- as.character(x)
+  } else if(is(x, "DNAbin")){
+    asv_sequences <- taxreturn::DNAbin2char(x)
+  } else{
+    stop("Error: Taxa do not appear to be DNA sequences.")
+  }
+  seqs <- Biostrings::DNAStringSet(asv_sequences)
 
-  cutoff <- 100 - similarity
+  # define cutoffs for clustering
+  if(!dplyr::between(similarity, 0, 1)){
+    stop("similarity must be a number between 0 and 1")
+  }
+  cutoff <- 1 - similarity
 
   ## Find clusters of ASVs to form the new OTUs
-  aln <- DECIPHER::AlignSeqs(dna, processors = cores)
+  aln <- DECIPHER::AlignSeqs(seqs, processors = cores)
   d <- DECIPHER::DistanceMatrix(aln, processors = cores)
-  clusters <- DECIPHER::IdClusters(
+  otus <- DECIPHER::IdClusters(
     d,
     method = method,
     cutoff = cutoff, # use `cutoff = 0.03` for a 97% OTU
-    processors = cores)
+    processors = cores) %>%
+    dplyr::mutate(sequence = asv_sequences)  %>%
+    dplyr::group_by(cluster) %>%
+    dplyr::mutate(cluster_size = n_distinct(sequence)) %>%
+    dplyr::ungroup()
 
-  # add sequences to the `clusters` data frame
-  clusters <- clusters %>%
-    tibble::add_column(sequence = asv_sequences)
-
-  # Add rowsums
-  merged_seqtab <- seqtab %>%
-    t %>%
-    rowsum(clusters$cluster) %>%
-    t
-  #Rename
-  if(rename){
-    colnames(merged_seqtab) <- paste0("OTU", colnames(merged_seqtab))
-  }
-  return(merged_seqtab)
+  # Return cluster memberships
+  return(otus)
 }
-
 # Propagate taxonomic assignments to species level ------------------------
 
 #' Propagate taxonomy
