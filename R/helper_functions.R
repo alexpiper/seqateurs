@@ -227,7 +227,7 @@ summarise_taxa <-  function(physeq, rank, group_by = NULL){
 cluster_otus <- function(x, method="complete", similarity=0.97, cores=1) {
 
   if(is(x, "matrix")| is(x, "data.frame")){
-    asv_sequences <- colnames(seqtab)
+    asv_sequences <- colnames(x)
   } else if(is(x, "phyloseq") & !is.null(phyloseq::refseq(x, errorIfNULL = FALSE))){
     asv_sequences <- as.vector(phyloseq::refseq(x))
   } else if(is(x, "phyloseq") & is.null(phyloseq::refseq(x, errorIfNULL = FALSE))){
