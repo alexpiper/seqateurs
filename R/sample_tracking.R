@@ -19,7 +19,9 @@ create_samplesheet <- function(SampleSheet, runParameters, template = "V4"){
   if (missing(runParameters)) {stop("Error: need to provide a runParameters file in .xml format")}
   if (missing(SampleSheet)) {stop("Error: need to provide a SampleSheet file in .csv format")}
   if (length(SampleSheet) > 1) {multi <- TRUE}
-  if (!length(SampleSheet) == length(runParameters)) {stop("Error: SampleSheet and RunParameters need to be provided for every run")}
+  if (!length(SampleSheet) == length(runParameters)) {
+    stop("Error: you have provided ", length(SampleSheet) , " SampleSheets and ", length(runParameters), " runParameters files. One of each must be provided per run")
+    }
 
   #Parse files
   merged <- purrr::map2(SampleSheet, runParameters, parse_seqrun) %>%
