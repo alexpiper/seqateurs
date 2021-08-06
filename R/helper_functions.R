@@ -514,13 +514,15 @@ coalesce_join <- function(x, y,
     nchar(to_coalesce) - nchar(suffix_used)
   ))
 
-  coalesced <- purrr::map_dfc(to_coalesce, ~dplyr::coalesce(
-    joined[[paste0(.x, suffix[1])]],
-    joined[[paste0(.x, suffix[2])]]
-  ))
+  coalesced <- purrr::map_dfc(to_coalesce, ~{
+    left_side <- joined[[paste0(.x, suffix[1])]]
+    right_side <- joined[[paste0(.x, suffix[2])]]
+    if((!all(is.na(left_side)) && !all(is.na(right_side))) && (!class(left_side) == class(right_side))){
+      class(right_side) <- class(left_side)
+    }
+    dplyr::coalesce(right_side, left_side)
+  })
   names(coalesced) <- to_coalesce
-
   dplyr::bind_cols(joined, coalesced)[cols]
 }
-
 
