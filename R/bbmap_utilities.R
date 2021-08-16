@@ -1266,12 +1266,13 @@ bbtrim2 <- function(install = NULL, fwd, rev = NULL, primers, checkpairs = FALSE
 #'
 #' @return
 #' @export
-#' @import stringr
+#' @importFrom stringr str_replace
+#' @importFrom processx run
 #'
 bbsplit2 <- function(install = NULL, file, force = FALSE, quiet=FALSE) {
   # Split interleaved reads
-  out1 <- paste0("out1=", file %>% str_replace(pattern = "_R1R2_", replacement = "_R1_"))
-  out2 <- paste0("out2=", file %>% str_replace(pattern = "_R1R2_", replacement = "_R2_"))
+  out1 <- paste0("out1=", file %>% stringr::str_replace(pattern = "_R1R2_", replacement = "_R1_"))
+  out2 <- paste0("out2=", file %>% stringr::str_replace(pattern = "_R1R2_", replacement = "_R2_"))
   if(!quiet) {message(paste0("De-interleaving reads for: ", file))}
   if (force == TRUE) {
     force <- "overwrite=TRUE"
@@ -1293,6 +1294,7 @@ bbsplit2 <- function(install = NULL, file, force = FALSE, quiet=FALSE) {
                   windows_verbatim_args=TRUE,
                   error_on_status = TRUE,
                   cleanup_tree = TRUE)
+    file.remove(file)
   } else{
 
     reformat_args <- paste(" -cp ", paste0(install, "/current jgi.ReformatReads "),
@@ -1307,10 +1309,7 @@ bbsplit2 <- function(install = NULL, file, force = FALSE, quiet=FALSE) {
                   windows_verbatim_args=TRUE,
                   error_on_status = TRUE,
                   cleanup_tree = TRUE)
-
+    file.remove(file)
   }
 }
-
-
-
 
