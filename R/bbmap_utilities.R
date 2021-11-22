@@ -965,8 +965,8 @@ bbdemux2 <- function(install = NULL, fwd, rev = NULL, Fbarcodes = NULL, Rbarcode
     # Run bbduk using shell script
     result <- processx::run(command=paste0(install, "/seal.sh"),
                             args = args,
-                            echo=quiet,
-                            echo_cmd	= quiet,
+                            echo=!quiet,
+                            echo_cmd	= !quiet,
                             spinner=TRUE,
                             stderr_to_stdout = FALSE,
                             windows_verbatim_args=TRUE,
@@ -984,8 +984,8 @@ bbdemux2 <- function(install = NULL, fwd, rev = NULL, Fbarcodes = NULL, Rbarcode
     if(!quiet) {message(paste0("Demultiplexing ",length(Fbarcodes)," tagged primers for: ", fwd, " and ", rev))}
     result <- processx::run(command="java",
                             args = args,
-                            echo=quiet,
-                            echo_cmd	= quiet,
+                            echo=!quiet,
+                            echo_cmd	= !quiet,
                             spinner=TRUE,
                             stderr_to_stdout = FALSE,
                             windows_verbatim_args=TRUE,
@@ -1078,6 +1078,12 @@ bbtrim2 <- function(install = NULL, fwd, rev = NULL, primers, checkpairs = FALSE
   }
 
   if (!is.null(primers)) {
+    #replace any inosines with N
+    if(any(stringr::str_detect(primers, "I"))){
+      primers <- stringr::str_replace(primers,"I", "N")
+      if(!quiet){message("Replaced I bases in primers with N for trimming")}
+    }
+
     literal <- paste0("literal=", paste0(primers, collapse = ","))
   } else {
     (stop("Primer sequences are required for trimming"))
@@ -1171,8 +1177,8 @@ bbtrim2 <- function(install = NULL, fwd, rev = NULL, primers, checkpairs = FALSE
       # Run Reformatreads
       result <- processx::run(command=paste0(install, "/reformat.sh"),
                               args = reformat_args,
-                              echo=quiet,
-                              echo_cmd	= quiet,
+                              echo=!quiet,
+                              echo_cmd	= !quiet,
                               spinner=TRUE,
                               windows_verbatim_args=TRUE,
                               error_on_status = TRUE,
@@ -1183,8 +1189,8 @@ bbtrim2 <- function(install = NULL, fwd, rev = NULL, primers, checkpairs = FALSE
       # Run Reformatreads
       result <- processx::run(command="java",
                               args = reformat_args,
-                              echo=quiet,
-                              echo_cmd	= quiet,
+                              echo=!quiet,
+                              echo_cmd	= !quiet,
                               spinner=TRUE,
                               windows_verbatim_args=TRUE,
                               error_on_status = TRUE,
@@ -1205,8 +1211,8 @@ bbtrim2 <- function(install = NULL, fwd, rev = NULL, primers, checkpairs = FALSE
     # Run bbduk using shell script
     result <- processx::run(command=paste0(install, "/bbduk.sh"),
                             args = args,
-                            echo=quiet,
-                            echo_cmd	= quiet,
+                            echo=!quiet,
+                            echo_cmd	= !quiet,
                             spinner=TRUE,
                             stderr_to_stdout = FALSE,
                             windows_verbatim_args=TRUE,
@@ -1223,8 +1229,8 @@ bbtrim2 <- function(install = NULL, fwd, rev = NULL, primers, checkpairs = FALSE
     # Run bbduk using java
     result <- processx::run(command="java",
                             args = args,
-                            echo=quiet,
-                            echo_cmd	= quiet,
+                            echo=!quiet,
+                            echo_cmd	= !quiet,
                             spinner=TRUE,
                             stderr_to_stdout = FALSE,
                             windows_verbatim_args=TRUE,
@@ -1287,8 +1293,8 @@ bbsplit2 <- function(install = NULL, file, force = FALSE, quiet=FALSE) {
     # Run Reformatreads using shell script
     processx::run(command=paste0(install, "/reformat.sh"),
                   args = reformat_args,
-                  echo=quiet,
-                  echo_cmd	= quiet,
+                  echo=!quiet,
+                  echo_cmd	= !quiet,
                   spinner=TRUE,
                   stderr_to_stdout = FALSE,
                   windows_verbatim_args=TRUE,
@@ -1302,8 +1308,8 @@ bbsplit2 <- function(install = NULL, file, force = FALSE, quiet=FALSE) {
     # Run Reformatreads using java
     processx::run(command="java",
                   args = reformat_args,
-                  echo=quiet,
-                  echo_cmd	= quiet,
+                  echo=!quiet,
+                  echo_cmd	= !quiet,
                   spinner=TRUE,
                   stderr_to_stdout = FALSE,
                   windows_verbatim_args=TRUE,
