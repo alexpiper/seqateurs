@@ -4,25 +4,17 @@
 \alias{codon_filter}
 \title{Filter sequences containing stop codons}
 \usage{
-codon_filter(
-  x,
-  genetic.code = "SGC4",
-  forward = TRUE,
-  reverse = FALSE,
-  remove.ambiguities = TRUE
-)
+codon_filter(x, genetic_code = NULL, tryrc = TRUE, resolve_draws = "majority")
 }
 \arguments{
 \item{x}{Sequences in DNAStringset or DNAbin format}
 
-\item{genetic.code}{A genetic code for the Amino acid translation. See all known codes at GENETIC_CODE_TABLE
-Default is the invertebrate mitochondrial code 'SGC4'}
+\item{genetic_code}{A genetic code for the Amino acid translation. set to 'SGC4' for Invertebrate mitochondrial or see all known codes at Biostrings::GENETIC_CODE_TABLE}
 
-\item{forward}{Whether the forward complement should be used}
+\item{tryrc}{Whether the reverse complemement should be evaluated if no frame without stop codons was found in the forward orientation.}
 
-\item{reverse}{Whether the reverse complement should be used}
-
-\item{remove.ambiguities}{Whether ambiguous bases (non ATGC) bases should be removed}
+\item{resolve_draws}{How draws should be resolved when multiple possible frames produce sequences with no stop codons.
+Options are "remove" to completely remove the sequence, or "majority" to pick the most common frame from the entire alignment.}
 }
 \value{
 
