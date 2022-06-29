@@ -33,9 +33,6 @@ estimate_trunclen(
 
 \item{quiet}{Whether progress should be printed to console}
 }
-\value{
-
-}
 \description{
 Automatically estimate trunclen for filtering
 }

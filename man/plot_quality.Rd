@@ -9,9 +9,6 @@ plot_quality(input, n = 5e+05)
 \arguments{
 \item{n}{The number of reads to sample}
 }
-\value{
-
-}
 \description{
 Quality plot
 }

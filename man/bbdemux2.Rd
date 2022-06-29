@@ -61,9 +61,6 @@ WARNING: Thread detection can fail on cluster computing currently}
 \item{interleaved}{(Optional) Default FALSE
 Option to input interleaved reads}
 }
-\value{
-
-}
 \description{
 Demultiplex fusion primers using BBmap Seal
 }

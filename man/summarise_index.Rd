@@ -11,9 +11,6 @@ summarise_index(fq, qualityType = "Auto")
 
 \item{qualityType}{The quality encoding of the fastq file}
 }
-\value{
-
-}
 \description{
 Summarise index
 }

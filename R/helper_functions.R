@@ -211,9 +211,6 @@ summarise_taxa <-  function(physeq, rank, group_by = NULL){
 #'
 #' @param x The input object can be a DADA2 generated ASV table with columns as sequences and rows as samples,
 #' a phyloseq object with or without refseqs, or a DNAbin or DNAStringSet.
-#' @param method An agglomeration method to parse to DECIPHER::IdClusters.
-#' This should be (an abbreviation of) one of "complete", "single", "UPGMA", "WPGMA", "NJ", "ML", or "inexact".
-#' (See help page on DECIPHER::IdClusters for more information.)
 #' @param similarity A similarity threshold to cluster at. Must be a number between 0 and 1
 #' @param cores The number of processsor cores to use
 #'
@@ -224,7 +221,7 @@ summarise_taxa <-  function(physeq, rank, group_by = NULL){
 #' @import dplyr
 #'
 #' @examples
-cluster_otus <- function(x, method="complete", similarity=0.97, cores=1) {
+cluster_otus <- function(x, similarity=0.97, cores=1) {
 
   if(is(x, "matrix")| is(x, "data.frame")){
     asv_sequences <- colnames(x)
@@ -252,11 +249,8 @@ cluster_otus <- function(x, method="complete", similarity=0.97, cores=1) {
   cutoff <- 1 - similarity
 
   ## Find clusters of ASVs to form the new OTUs
-  aln <- DECIPHER::AlignSeqs(seqs, processors = cores)
-  d <- DECIPHER::DistanceMatrix(aln, processors = cores)
   otus <- DECIPHER::IdClusters(
-    d,
-    method = method,
+    seqs,
     cutoff = cutoff, # use `cutoff = 0.03` for a 97% OTU
     processors = cores) %>%
     dplyr::mutate(sequence = asv_sequences)  %>%

@@ -15,9 +15,6 @@ create_samplesheet(SampleSheet, runParameters, template = "V4")
 This can be a character referring to the version of the sample sheet (currently only "V4" is supported)
 Or a data.frame input to use as a template}
 }
-\value{
-
-}
 \description{
 Create Samplesheet
 }

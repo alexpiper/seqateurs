@@ -14,9 +14,6 @@ URL to retrieve fastQC from.}
 
 \item{dest.dir}{Deprecated}
 }
-\value{
-
-}
 \description{
 fastqc_install
 }

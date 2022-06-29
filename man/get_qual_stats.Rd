@@ -9,9 +9,6 @@ get_qual_stats(input, n = 5e+05)
 \arguments{
 \item{n}{The number of reads to sample}
 }
-\value{
-
-}
 \description{
 Get qual stats
 }

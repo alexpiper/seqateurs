@@ -13,9 +13,6 @@ plot_lengths(dir, aggregate = FALSE, sample = 1e+06)
 
 \item{sample}{How many reads to sample from each fastq, default 1e6}
 }
-\value{
-
-}
 \description{
 Plot readlengths of fastq
 }

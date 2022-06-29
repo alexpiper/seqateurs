@@ -9,9 +9,6 @@ clr(x, base = exp(1), close = TRUE)
 \arguments{
 \item{base}{}
 }
-\value{
-
-}
 \description{
 Centred log-ratio transformation
 }

@@ -4,22 +4,15 @@
 \alias{cluster_otus}
 \title{OTU clustering of DADA2 seqtab}
 \usage{
-cluster_otus(x, method = "complete", similarity = 0.97, cores = 1)
+cluster_otus(x, similarity = 0.97, cores = 1)
 }
 \arguments{
 \item{x}{The input object can be a DADA2 generated ASV table with columns as sequences and rows as samples,
 a phyloseq object with or without refseqs, or a DNAbin or DNAStringSet.}
 
-\item{method}{An agglomeration method to parse to DECIPHER::IdClusters.
-This should be (an abbreviation of) one of "complete", "single", "UPGMA", "WPGMA", "NJ", "ML", or "inexact".
-(See help page on DECIPHER::IdClusters for more information.)}
-
 \item{similarity}{A similarity threshold to cluster at. Must be a number between 0 and 1}
 
 \item{cores}{The number of processsor cores to use}
-}
-\value{
-
 }
 \description{
 OTU clustering of DADA2 seqtab

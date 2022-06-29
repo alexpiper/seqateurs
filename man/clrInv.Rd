@@ -9,9 +9,6 @@ clrInv(x, base = exp(1))
 \arguments{
 \item{base}{}
 }
-\value{
-
-}
 \description{
 Inverse clr log-ratio transformation
 }

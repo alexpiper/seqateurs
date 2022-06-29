@@ -9,9 +9,6 @@
 \arguments{
 \item{interactive}{}
 }
-\value{
-
-}
 \description{
 Find executable
 }

@@ -11,9 +11,6 @@ create_logsheet(SampleSheet, runParameters)
 
 \item{runParameters}{A runParamers.xml or set of these output by the sequencer}
 }
-\value{
-
-}
 \description{
 Create logsheet
 }

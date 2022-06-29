@@ -15,9 +15,6 @@ Directory to install bbmap within.}
 
 \item{dest.dir}{DEPRECATED}
 }
-\value{
-
-}
 \description{
 Install BBtools
 }

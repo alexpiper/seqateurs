@@ -69,9 +69,6 @@ Option to overwrite existing output files.}
 \item{maxlength}{(Optional) Default FALSE
 Remove all reads above a maximum length. Useful for removing reads where no primers were found.}
 }
-\value{
-
-}
 \description{
 Trim primers using BBDuk
 }

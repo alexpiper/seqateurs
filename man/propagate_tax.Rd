@@ -9,9 +9,6 @@ propagate_tax(tax, from = "Family")
 \arguments{
 \item{from}{}
 }
-\value{
-
-}
 \description{
 Propagate taxonomy
 }

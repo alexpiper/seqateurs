@@ -26,9 +26,6 @@ coalesce_join(
 
 \item{...}{}
 }
-\value{
-
-}
 \description{
 A join to combine datasets containing identical non-key columns in varying states of completeness
 }

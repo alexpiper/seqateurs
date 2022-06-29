@@ -9,9 +9,6 @@ align_overlap(query, ref)
 \arguments{
 \item{ref}{}
 }
-\value{
-
-}
 \description{
 Minimum overlap between a query and reference
 }

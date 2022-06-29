@@ -13,9 +13,6 @@ bbsplit2(install = NULL, file, force = FALSE, quiet = FALSE)
 
 \item{files}{(Required) Vector of locations of interleaved read files to split}
 }
-\value{
-
-}
 \description{
 Split interleaved reads
 }

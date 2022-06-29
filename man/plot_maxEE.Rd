@@ -9,9 +9,6 @@ plot_maxEE(input, n = 5e+05)
 \arguments{
 \item{n}{}
 }
-\value{
-
-}
 \description{
 MaxEE plot
 }

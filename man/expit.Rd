@@ -9,9 +9,6 @@ expit(x)
 \arguments{
 \item{x}{}
 }
-\value{
-
-}
 \description{
 Inverse logitt transofmration
 }

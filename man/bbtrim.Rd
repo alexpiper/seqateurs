@@ -77,9 +77,6 @@ Read length histogram and Read GC content histogram.}
 \item{maxlength}{(Optional) Default FALSE
 Remove all reads above a maximum length. Useful for removing reads where no primers were found.}
 }
-\value{
-
-}
 \description{
 Trim primers using BBDuk
 }

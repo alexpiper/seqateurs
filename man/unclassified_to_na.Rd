@@ -16,9 +16,6 @@ i.e. G__Drosophila would be the default for an OTU that could only be assigned t
 
 \item{quiet}{Whether progress should be printed to console}
 }
-\value{
-
-}
 \description{
 Convert classifications that are annotated with their highest successful classification back ot NA
 }

@@ -19,9 +19,6 @@ Options include 'rank' which returns a character vector listing the lowest taxon
 
 \item{rownames}{Whether rownames should be returned, or instead an OTU column}
 }
-\value{
-
-}
 \description{
 Get the lowest classified ranks for the OTUs
 }

@@ -13,9 +13,6 @@ n_overlap(fwd, rev, sample = 100)
 
 \item{sample}{The number of reads to sample from the fastq files}
 }
-\value{
-
-}
 \description{
 Number of bases overlapping between forward and reverse reads
 }

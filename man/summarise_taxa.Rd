@@ -9,9 +9,6 @@ summarise_taxa(physeq, rank, group_by = NULL)
 \arguments{
 \item{group_by}{}
 }
-\value{
-
-}
 \description{
 Summarise_taxa
 }

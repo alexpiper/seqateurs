@@ -24,9 +24,6 @@ Default is the invertebrate mitochondrial code 'SGC4'}
 
 \item{resolve_draws}{How draws should be resolved when multiple possible frames produce sequences with no stop codons.}
 }
-\value{
-
-}
 \description{
 Get Reading frame of sequences
 }

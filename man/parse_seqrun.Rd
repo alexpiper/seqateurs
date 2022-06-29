@@ -9,9 +9,6 @@ parse_seqrun(SampleSheet, runParameters)
 \arguments{
 \item{runParameters}{}
 }
-\value{
-
-}
 \description{
 Parse seqrun
 }
