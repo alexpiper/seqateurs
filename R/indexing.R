@@ -21,11 +21,19 @@ summarise_index <- function(fq, qualityType = "Auto") {
   while( length(suppressWarnings(fqF <- yield(fF, qualityType = qualityType)))) {
     idF <- ShortRead::id(fqF)
   }
-  index <- stringr::str_extract(as.character(idF), pattern="(?!:)(?:.(?!:))+$") %>%
-    table() %>%
-    as.data.frame() %>%
-    tidyr::separate(col=1, into=c("index", "index2")) %>%
-    dplyr::arrange(desc(Freq))
+
+  # Check if index is present in fastq header
+  index_check <- stringr::str_extract(as.character(idF[[1]]), pattern="(?!:)(?:.(?!:))+$")
+  if(stringr::str_detect(index_check, "[A-Z]+[A-Z]")){
+    index <- stringr::str_extract(as.character(idF), pattern="(?!:)(?:.(?!:))+$") %>%
+      table() %>%
+      as.data.frame() %>%
+      tidyr::separate(col=1, into=c("index", "index2")) %>%
+      dplyr::arrange(desc(Freq))
+  } else{
+    warning(paste0("Index sequences were not present in fastq header for sample: ", fq))
+    index <- data.frame(index = NA_character_, index2=NA_character_, Freq = NA_integer_)
+  }
   return(index)
 }
 
