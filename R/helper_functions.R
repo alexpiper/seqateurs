@@ -249,9 +249,17 @@ cluster_otus <- function(x, similarity=0.97, cores=1) {
   cutoff <- 1 - similarity
 
   ## Find clusters of ASVs to form the new OTUs
-  otus <- DECIPHER::IdClusters(
+  otus <- DECIPHER::Clusterize(
     seqs,
-    cutoff = cutoff, # use `cutoff = 0.03` for a 97% OTU
+    cutoff = cutoff,  # use `cutoff = 0.03` for a 97% OTU
+    method = "overlap",
+    includeTerminalGaps = FALSE,
+    penalizeGapLetterMatches = NA,
+    minCoverage = 0.5,
+    maxReps = 1000,
+    avgComparisons = 5000,
+    maxAlignments = 100,
+    invertCenters = FALSE,
     processors = cores) %>%
     dplyr::mutate(sequence = asv_sequences)  %>%
     dplyr::group_by(cluster) %>%
@@ -261,6 +269,7 @@ cluster_otus <- function(x, similarity=0.97, cores=1) {
   # Return cluster memberships
   return(otus)
 }
+
 # Propagate taxonomic assignments to species level ------------------------
 
 #' Propagate taxonomy
