@@ -25,12 +25,12 @@ get_qual_stats <- function (input, n = 5e+05) {
   # Start loop
   FIRST <- TRUE
   for (f in fl[!is.na(fl)]) {
-
-    # f <- fl[!is.na(fl)][[1]]
-
-    srqa <- qa(f, n = n)
-    df <- srqa[["perCycle"]]$quality
-    rc <- sum(srqa[["readCounts"]]$read)
+    fq <- FastqFile(f)
+    rc <- countFastq(f)$records
+    close(fq)
+    coll <- QACollate(QAFastqSource(f, n=n), QAQualityByCycle())
+    srqa <- qa2(coll, BPPARAM=SerialParam(), verbose=FALSE)
+    df <- data.frame(srqa$QAQualityByCycle@values)
     if (rc >= n) {
       rclabel <- paste("Reads >= ", n)
     }  else {      rclabel <- paste("Reads: ", rc)
@@ -50,8 +50,7 @@ get_qual_stats <- function (input, n = 5e+05) {
     if (FIRST) {
       plotdf <- cbind(df, file = basename(f))
       FIRST <- FALSE
-    }
-    else {
+    } else {
       plotdf <- rbind(plotdf, cbind(df, file = basename(f)))
     }
 
