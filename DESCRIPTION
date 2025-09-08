@@ -11,10 +11,13 @@ Description: This package contains functions that supplement the DADA2 and Phylo
 License: What license it uses
 Encoding: UTF-8
 LazyData: true
-RoxygenNote: 7.2.1
+RoxygenNote: 7.3.2
 BiocViews:
 Imports: 
     Biostrings,
+    vegan,
+    patchwork,
+    RColorBrewer,
     DECIPHER,
     ShortRead,
     XML,

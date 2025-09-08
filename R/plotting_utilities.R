@@ -356,6 +356,293 @@ n_overlap <- function(fwd, rev, sample = 100) {
   return(overlap)
 }
 
+#' Function to make ordination plots with margin boxplots
+#'
+#' @param phyloseq a phyloseq object
+#' @param Dissimilarity index, partial match to "manhattan", "euclidean", "canberra", "clark", "bray", "kulczynski", "jaccard", "gower", "altGower", "morisita", "horn", "mountford", "raup", "binomial", "chao", "cao", "mahalanobis", "chisq", "chord", "hellinger", "aitchison", or "robust.aitchison". Parsed to vegan::vegdist()
+#' @param factor1 factor used for fill aesthetic
+#' @param factor2 factor used for fill aesthetic
+#' @param ellipse Which factor to use for ellipses. Value must be 'factor1', 'factor2', 'none' or 'both'
+#' @param legend Which factor to plot legends for. Value must be 'factor1', 'factor2', 'none' or 'both'
+#' @param marginplot Which factor to plot margin plots for. Value must be 'factor1', 'factor2', 'none' or 'both'
+#' @param margintext Whether text should be plotted for margin plots
+#' @param palette A colour palette compatible with RColorBrewer
+#' @param title Add a title to the plot
+#' @param formula Formula parsed to vegan::adonis2 for adding stats annotations.
+#'
+#' @return
+#' @export
+#' @import vegan
+#' @import phyloseq
+#' @import ggplot2
+#' @import patchwork
+#' @import RColorBrewer
+#'
+#' @examples
+#
+plot_ordination_margins <- function(ps, method="jac", factor1, factor2,
+                                    ellipse="factor1", legend="both",marginplot="factor1",
+                                    margintext=TRUE, palette="Set2", title=NULL,
+                                    formula=NULL){
+  # Get otutab and filter for empty rows and columns
+  otutab <- phyloseq::otu_table(ps) %>%
+    as("matrix")
+  otutab <- otutab[rowSums(otutab) >0,colSums(otutab) > 0]
 
+  # Create distance matrix
+  if (method == "aitchison"){
+    distmat <- as.matrix(vegan::vegdist(otutab, method="aitchison", pseudocount=1)) # replace zeros with a pseudocount of 1
 
+  } else {
+    distmat <- as.matrix(vegan::vegdist(otutab, method=method,binary = T))
+  }
+
+  # Ordinate distance matrix using pcoa
+  ord <- phyloseq::ordinate(ps, 'PCoA', distance=as.dist(distmat))
+
+  # Get ordtable
+  ordtable <- phyloseq::plot_ordination(ps, ord, justDF = TRUE)
+
+  # Plot main ordination
+  p1 <- ordtable %>%
+    ggplot(aes(x = Axis.1, y = Axis.2, fill=!!enquo(factor1), shape=!!enquo(factor2), colour=!!enquo(factor1)))
+
+  if(ellipse =="factor1"){
+    p1 <- p1 +
+      stat_ellipse(type="norm", alpha=1, aes(group=!!enquo(factor1)))
+  } else if(ellipse =="factor2"){
+    p1 <- p1 +
+      stat_ellipse(type="norm", alpha=1, aes(group=!!enquo(factor2)))
+  } else if(ellipse =="both"){
+    p1 <- p1 +
+      stat_ellipse(type="norm", alpha=1, aes(group=!!enquo(factor1)))+
+      stat_ellipse(type="norm", alpha=1, aes(group=!!enquo(factor2)))
+  } else if(ellipse == "none"){
+    p1 <- p1
+  } else {
+    stop("value of 'ellipse' must be 'factor1', 'factor2', 'none' or 'both'")
+  }
+  p1 <- p1 +
+    geom_hline(yintercept = 0, linetype=2, alpha=0.5) +
+    geom_vline(xintercept = 0, linetype=2, alpha=0.5) +
+    geom_point(size=3, alpha=1, colour="black") +
+    scale_shape_manual(values=c(21,22,24))+
+    theme_bw() +
+    theme(legend.position = "bottom",
+          panel.grid.major = element_blank(),
+          panel.grid.minor = element_blank(),
+          panel.background = element_blank()
+    )
+
+  if(legend =="factor1"){
+    p1 <- p1 +
+      guides(shape=FALSE)
+  } else if(legend =="factor2"){
+    p1 <- p1 +
+      guides(fill = FALSE)
+  } else if(legend =="both"){
+    p1 <- p1
+  } else if(legend == "none"){
+    p1 <- p1+
+      guides(fill = FALSE, colour = FALSE,  shape=FALSE)
+  } else {
+    stop("value of 'legend' must be 'factor1', 'factor2', 'none' or 'both'")
+  }
+
+  # Add percentage variation explained
+  eigvec <- ord$values$Eigenvalues
+  fracvar <- eigvec[1:2]/sum(eigvec)
+  percvar <- round(100 * fracvar, 1)
+  strivar <- as(c(p1$label$x, p1$label$y), "character")
+  strivar <- paste0(strivar, "   [", percvar, "%]")
+  p1 <- p1 + xlab(strivar[1]) + ylab(strivar[2])
+
+  # Get limits of ordination to define ranges of margin plots
+  xlim <- layer_scales(p1)$x$range$range
+  ylim <- layer_scales(p1)$y$range$range
+
+  # Create margin plots
+  p1_axis1 <- ordtable %>%
+    ggplot(aes(y = !!enquo(factor1), x = Axis.1, fill=!!enquo(factor1), group=!!enquo(factor1))) +
+    geom_boxplot(outlier.shape = 21)+
+    scale_x_continuous(limits = xlim)+
+    theme_bw()+
+    theme(legend.position = "none",
+          panel.grid.major = element_blank(),
+          panel.grid.minor = element_blank(),
+          panel.background = element_blank()
+    )
+
+  p1_axis2 <- ordtable %>%
+    ggplot(aes(x = !!enquo(factor1), y = Axis.2, fill=!!enquo(factor1))) +
+    geom_boxplot(outlier.shape = 21)+
+    scale_y_continuous(limits = ylim)+
+    theme_bw()+
+    theme(legend.position = "none",
+          panel.grid.major = element_blank(),
+          panel.grid.minor = element_blank(),
+          panel.background = element_blank()
+    )
+
+  p2_axis1 <- ordtable %>%
+    ggplot(aes(y = !!enquo(factor2), x = Axis.1, group=!!enquo(factor2))) +
+    geom_boxplot(outlier.shape = 21)+
+    scale_x_continuous(limits = xlim)+
+    theme_bw()+
+    theme(legend.position = "none",
+          panel.grid.major = element_blank(),
+          panel.grid.minor = element_blank(),
+          panel.background = element_blank()
+    )
+
+  p2_axis2 <- ordtable %>%
+    ggplot(aes(x = !!enquo(factor2), y = Axis.2)) +
+    geom_boxplot(outlier.shape = 21)+
+    scale_y_continuous(limits = ylim)+
+    theme_bw()+
+    theme(legend.position = "none",
+          panel.grid.major = element_blank(),
+          panel.grid.minor = element_blank(),
+          panel.background = element_blank()
+    )
+
+  # remove margin text
+  if(margintext){
+    p1_axis1 <- p1_axis1 +
+      theme(
+        axis.ticks.x = element_blank(),
+        axis.text.x = element_blank(),
+        axis.title = element_blank()
+      )
+    p1_axis2 <- p1_axis2 +
+      theme(
+        axis.ticks.y = element_blank(),
+        axis.text.y = element_blank(),
+        axis.text.x = element_text(angle=45, hjust=1),
+        axis.title = element_blank()
+      )
+    p2_axis1 <- p2_axis1 +
+      theme(
+        axis.ticks.x = element_blank(),
+        axis.text.x = element_blank(),
+        axis.title = element_blank()
+      )
+    p2_axis2 <- p2_axis2 +
+      theme(
+        axis.ticks.y = element_blank(),
+        axis.text.y = element_blank(),
+        axis.text.x = element_text(angle=45, hjust=1),
+        axis.title = element_blank()
+      )
+  } else if(!margintext){
+    p1_axis1 <- p1_axis1 +
+      theme(
+        axis.ticks = element_blank(),
+        axis.text = element_blank(),
+        axis.title = element_blank()
+      )
+    p1_axis2 <- p1_axis2 +
+      theme(
+        axis.ticks = element_blank(),
+        axis.text = element_blank(),
+        axis.title = element_blank()
+      )
+    p2_axis1 <- p2_axis1 +
+      theme(
+        axis.ticks = element_blank(),
+        axis.text = element_blank(),
+        axis.title = element_blank()
+      )
+    p2_axis2 <- p2_axis2 +
+      theme(
+        axis.ticks = element_blank(),
+        axis.text = element_blank(),
+        axis.title = element_blank()
+      )
+  }
+
+  # Add colour palettes
+  if(palette == "viridis"){
+    p1 <- p1 +
+      scale_fill_viridis_d()+
+      scale_colour_viridis_d()
+    p1_axis1 <- p1_axis1 +
+      scale_fill_viridis_d()
+    p1_axis2 <- p1_axis2 +
+      scale_fill_viridis_d()
+  }else {
+    p1 <- p1 +
+      scale_fill_brewer(palette=palette) +
+      scale_colour_brewer(palette=palette)
+    p1_axis1 <- p1_axis1 +
+      scale_fill_brewer(palette=palette)
+    p1_axis2 <- p1_axis2 +
+      scale_fill_brewer(palette=palette)
+  }
+
+  # Add main plot title
+  if(is.character(title) & marginplot =="factor1"){
+    p1_axis1 <- p1_axis1 +
+      ggtitle(label = title)
+  } else if(is.character(title) & marginplot %in% c("factor2", "both")){
+    p2_axis1 <- p2_axis1 +
+      ggtitle(label = title)
+  } else if(is.character(title) & marginplot == "none"){
+    p1 <- p1 +
+      ggtitle(label = title)
+  }
+
+  if(!is.null(formula)){
+    # Run adonis
+    metadata <- sample_data(phyloseq) %>%
+      as("data.frame")
+
+    #### permanova tests for differences in beta diversity
+    y <- as.dist(distmat[metadata$sample_name, metadata$sample_name])
+
+    # test for differences driven by endophyte, taking into account flow cell and month as variables
+    res <- vegan::adonis2(formula, method="euclidean", data=metadata, permutations = 999)
+    blurb <- broom::tidy(res) %>%
+      filter(!is.na(p.value))%>%
+      mutate(disp = paste0(term,"(",df,") R2: ", round(R2,3), " p: ", p.value)) %>%
+      pull(disp) %>%
+      paste(collapse="\n")
+    blurb <- paste0("Adonis\n",blurb)
+    text_stat <- ggplot() +
+      annotate("text", x = 0, y = 25, label = blurb) +
+      theme_void()
+  } else {
+    text_stat <- ggplot() +
+      annotate("text", x = 0, y = 25, label = "") +
+      theme_void()
+  }
+
+  if(marginplot =="factor1"){
+    # Set up custom layout for patchwork
+    design <- "
+      12
+      34
+    "
+    out <- p1_axis1 + text_stat + p1 + p1_axis2 +plot_layout(design = design, widths = c(6,1), heights=c(1,6))
+  } else if(marginplot =="factor2"){
+    # Set up custom layout for patchwork
+    design <- "
+      12
+      34
+    "
+    out <- p2_axis1 + text_stat + p1 + p2_axis2 + plot_layout(design = design, widths = c(6,1), heights=c(1,6))
+  } else if(marginplot =="both"){
+    # Set up custom layout for patchwork
+    design <- "
+      12#
+      3##
+      456
+    "
+    out <- p2_axis1 + text_stat + p1_axis1 + p1 + p1_axis2 + p2_axis2 + plot_layout(design = design, widths = c(6,1,1), heights=c(1,1,6))  } else if(marginplot == "none"){
+      out <- p1
+    } else {
+      stop("value of 'legend' must be 'factor1', 'factor2', 'none' or 'both'")
+    }
+  return(out)
+}
 
